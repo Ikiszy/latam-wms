@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import json
-import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from supabase import create_client, Client
 
 # Configuração da Página
 st.set_page_config(
@@ -18,10 +17,7 @@ st.set_page_config(
 # Estilização CSS refinada idêntica ao design corporativo desejado
 st.markdown("""
     <style>
-        /* Ajuste do fundo e fontes globais */
         .main { background-color: #121824; color: #F8FAFC; }
-        
-        /* Botões Padrão LATAM */
         .stButton>button {
             background-color: #E2001A !important;
             color: #FFFFFF !important;
@@ -35,8 +31,6 @@ st.markdown("""
         .stButton>button:hover {
             background-color: #C50017 !important;
         }
-        
-        /* Ocultar bolinhas e estilizar menu lateral */
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label div:first-child {
             display: none !important;
         }
@@ -61,34 +55,54 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Funções de Persistência Local (JSON)
-ARQUIVO_USUARIOS = "usuarios.json"
-ARQUIVO_PEDIDOS = "pedidos.json"
+# Conexão com o Supabase via Secrets
+@st.cache_resource
+def init_supabase():
+    url = st.secrets["supabase"]["url"]
+    key = st.secrets["supabase"]["key"]
+    return create_client(url, key)
 
-def carregar_usuarios():
-    if os.path.exists(ARQUIVO_USUARIOS):
-        with open(ARQUIVO_USUARIOS, "r", encoding="utf-8") as f:
-            return json.load(f)
-    else:
-        usuarios_padrao = {
+supabase: Client = init_supabase()
+
+def buscar_usuarios():
+    try:
+        response = supabase.table("usuarios").select("*").execute()
+        usuarios_dict = {u["bp"]: u for u in response.data}
+        if not usuarios_dict:
+            # Usuário padrão caso a tabela esteja totalmente vazia
+            return {
+                "4872423": {"nome": "Isadora Sousa Lima", "base": "FOR - Fortaleza", "senha": "123", "email": "isadora@latam.com"}
+            }
+        return usuarios_dict
+    except Exception:
+        return {
             "4872423": {"nome": "Isadora Sousa Lima", "base": "FOR - Fortaleza", "senha": "123", "email": "isadora@latam.com"}
         }
-        salvar_usuarios_arquivo(usuarios_padrao)
-        return usuarios_padrao
 
-def salvar_usuarios_arquivo(usuarios):
-    with open(ARQUIVO_USUARIOS, "w", encoding="utf-8") as f:
-        json.dump(usuarios, f, ensure_ascii=False, indent=4)
+def salvar_usuario_supabase(bp, dados):
+    try:
+        supabase.table("usuarios").upsert({"bp": bp, **dados}).execute()
+    except Exception as e:
+        st.error(f"Erro ao salvar usuário no Supabase: {e}")
 
-def carregar_pedidos():
-    if os.path.exists(ARQUIVO_PEDIDOS):
-        with open(ARQUIVO_PEDIDOS, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
+def buscar_pedidos():
+    try:
+        response = supabase.table("pedidos").select("*").execute()
+        return response.data
+    except Exception:
+        return []
 
-def salvar_pedidos_arquivo(pedidos):
-    with open(ARQUIVO_PEDIDOS, "w", encoding="utf-8") as f:
-        json.dump(pedidos, f, ensure_ascii=False, indent=4)
+def salvar_pedido_supabase(pedido):
+    try:
+        supabase.table("pedidos").insert(pedido).execute()
+    except Exception as e:
+        st.error(f"Erro ao salvar pedido no Supabase: {e}")
+
+def atualizar_pedido_supabase(pedido_id, novos_itens, novo_status):
+    try:
+        supabase.table("pedidos").update({"itens": novos_itens, "status": novo_status}).eq("id", pedido_id).execute()
+    except Exception as e:
+        st.error(f"Erro ao atualizar pedido: {e}")
 
 # Função para Disparo Real de E-mail via SMTP (Recuperação de Senha)
 def enviar_email_smtp(destinatario_email, nome_usuario, nova_senha):
@@ -194,8 +208,8 @@ BASES_LATAM = [
 if 'usuario_logado' not in st.session_state:
     st.session_state.usuario_logado = None
 
-usuarios_db = carregar_usuarios()
-pedidos_db = carregar_pedidos()
+usuarios_db = buscar_usuarios()
+pedidos_db = buscar_pedidos()
 
 # TELA DE AUTENTICAÇÃO COM CARD ARREDONDADO
 if not st.session_state.usuario_logado:
@@ -239,9 +253,9 @@ if not st.session_state.usuario_logado:
                     elif c_bp in usuarios_db:
                         st.error("⚠️ Este BP já está cadastrado.")
                     else:
-                        usuarios_db[c_bp] = {"nome": c_nome, "base": c_base, "senha": c_senha, "email": c_email}
-                        salvar_usuarios_arquivo(usuarios_db)
-                        st.success("🎉 Cadastro realizado com sucesso! Faça login na aba ao lado.")
+                        novo_usuario = {"nome": c_nome, "base": c_base, "senha": c_senha, "email": c_email}
+                        salvar_usuario_supabase(c_bp, novo_usuario)
+                        st.success("🎉 Cadastro realizado e salvo no Supabase com sucesso! Faça login na aba ao lado.")
 
             with tab3:
                 st.markdown("<br>", unsafe_allow_html=True)
@@ -252,7 +266,7 @@ if not st.session_state.usuario_logado:
                 if st.button("Enviar E-mail de Recuperação", key="btn_rec"):
                     if r_bp in usuarios_db and usuarios_db[r_bp]["email"] == r_email:
                         usuarios_db[r_bp]["senha"] = r_novasenha
-                        salvar_usuarios_arquivo(usuarios_db)
+                        salvar_usuario_supabase(r_bp, usuarios_db[r_bp])
                         sucesso_envio = enviar_email_smtp(r_email, usuarios_db[r_bp]['nome'], r_novasenha)
                         
                         if sucesso_envio:
@@ -263,7 +277,7 @@ if not st.session_state.usuario_logado:
                         st.error("⚠️ BP ou e-mail não conferem com os registros.")
 
 else:
-    # APLICAÇÃO PRINCIPAL COM CABEÇALHO LATERAL LIMPO
+    # APLICAÇÃO PRINCIPAL COM CABEÇALHO ROXO E MENU LIMPO
     user = st.session_state.usuario_logado
     
     st.sidebar.markdown("""
@@ -289,7 +303,6 @@ else:
     pedidos_base = [p for p in pedidos_db if p['base'] == user['base']]
 
     if menu == "Painel de Gestão":
-        # CABEÇALHO IDÊNTICO AO PROTÓTIPO EM HTML (BLOCOS ROXOS ARREDONDADOS)
         st.markdown(f"""
             <div style="background: linear-gradient(135deg, #2A0052 0%, #1A0033 100%); padding: 25px 30px; border-radius: 16px; border: 1px solid #4C1D95; box-shadow: 0 8px 20px rgba(0,0,0,0.4); display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                 <div>
@@ -365,9 +378,8 @@ else:
                         "status": "Pendente",
                         "itens": itens_solicitados
                     }
-                    pedidos_db.append(novo_pedido)
-                    salvar_pedidos_arquivo(pedidos_db)
-                    st.success(f"🎉 Pedido {novo_pedido['id']} registado com sucesso!")
+                    salvar_pedido_supabase(novo_pedido)
+                    st.success(f"🎉 Pedido {novo_pedido['id']} registado no Supabase com sucesso!")
                     st.rerun()
 
     elif menu == "Conferência e Ajustes":
@@ -391,10 +403,8 @@ else:
                 with col1:
                     if st.button("Salvar Ajustes & Confirmar Recebimento", type="primary"):
                         novos_itens = edited_df.to_dict(orient="records")
-                        pedido['itens'] = novos_itens
-                        pedido['status'] = "Recebido"
-                        salvar_pedidos_arquivo(pedidos_db)
-                        st.success(f"🎉 Pedido {pedido['id']} confirmado com sucesso!")
+                        atualizar_pedido_supabase(pedido['id'], novos_itens, "Recebido")
+                        st.success(f"🎉 Pedido {pedido['id']} confirmado no Supabase!")
                         st.rerun()
                         
                 with col2:
