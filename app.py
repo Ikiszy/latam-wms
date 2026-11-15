@@ -13,32 +13,13 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Injeção do Design CSS Exato (Identidade LATAM & Dark Mode)
+# Estilização CSS refinada para harmonizar com o Dark Mode e cantos arredondados
 st.markdown("""
     <style>
-        :root {
-            --primary: #1A0033;
-            --primary-light: #2A0052;
-            --latam-red: #E2001A;
-            --bg-light: #121824;
-            --card-bg: #1E293B;
-            --text-main: #F8FAFC;
-            --text-muted: #94A3B8;
-            --border-color: #334155;
-        }
-
-        .main { background-color: var(--bg-light); color: var(--text-main); font-family: 'Segoe UI', sans-serif; }
-        
-        /* Ajustes visuais globais do Streamlit para combinar com o layout */
-        [data-testid="stSidebar"] {
-            background-color: var(--card-bg);
-            border-right: 1px solid var(--border-color);
-        }
-        
         .stButton>button {
-            background-color: var(--latam-red) !important;
+            background-color: #E2001A !important;
             color: #FFFFFF !important;
-            border-radius: 8px !important;
+            border-radius: 10px !important;
             font-weight: 700 !important;
             height: 48px !important;
             border: none !important;
@@ -47,54 +28,6 @@ st.markdown("""
         }
         .stButton>button:hover {
             background-color: #C50017 !important;
-        }
-
-        /* Cards de Métricas Personalizados */
-        .card-metric {
-            background: var(--card-bg);
-            padding: 25px;
-            border-radius: 14px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            border-left: 6px solid var(--latam-red);
-            border-top: 1px solid var(--border-color);
-            border-right: 1px solid var(--border-color);
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 20px;
-        }
-        .card-metric.success {
-            border-left-color: #38A169;
-        }
-        .card-metric span {
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--text-muted);
-            letter-spacing: 1px;
-        }
-        .card-metric h3 {
-            font-size: 38px;
-            font-weight: 800;
-            color: #FFFFFF;
-            margin-top: 8px;
-            margin-bottom: 0px;
-        }
-
-        /* Estilização de abas e inputs */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 10px;
-            background-color: transparent;
-        }
-        .stTabs [data-baseweb="tab"] {
-            background-color: var(--card-bg);
-            border-radius: 8px 8px 0px 0px;
-            color: var(--text-muted);
-            font-weight: 700;
-            padding: 10px 20px;
-            border: 1px solid var(--border-color);
-        }
-        .stTabs [aria-selected="true"] {
-            background-color: var(--primary-light) !important;
-            color: #FFFFFF !important;
-            border-bottom-color: var(--latam-red) !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -205,7 +138,7 @@ BASES_LATAM = [
 # Inicialização do Estado da Sessão
 if 'usuarios' not in st.session_state:
     st.session_state.usuarios = {
-        "123456": {"nome": "Francisco Gleison", "base": "FOR - Fortaleza", "senha": "123", "email": "francisco@latam.com"}
+        "123456": {"nome": "Isadora Sousa Lima", "base": "FOR - Fortaleza", "senha": "123", "email": "isadora@latam.com"}
     }
 if 'pedidos' not in st.session_state:
     st.session_state.pedidos = []
@@ -213,70 +146,69 @@ if 'pedidos' not in st.session_state:
 if 'usuario_logado' not in st.session_state:
     st.session_state.usuario_logado = None
 
-# TELA DE AUTENTICAÇÃO COM LAYOUT REFINADO
+# TELA DE AUTENTICAÇÃO COM CARD ARREDONDADO
 if not st.session_state.usuario_logado:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.2, 1])
     
     with col2:
-        st.markdown("""
-            <div style="background: #1E293B; padding: 40px; border-radius: 16px; border: 1px solid #334155; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-                <div style="text-align: center; margin-bottom: 25px;">
-                    <h1 style="font-size: 30px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h1>
-                    <p style="font-size: 14px; color: #94A3B8; margin-top: 8px;">WMS e Logística de Insumos - Acesso Corporativo</p>
+        with st.container(border=True):
+            st.markdown("""
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h1 style="font-size: 28px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h1>
+                    <p style="font-size: 13px; color: #94A3B8; margin-top: 6px;">WMS e Logística de Insumos - Acesso Corporativo</p>
                 </div>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        tab1, tab2, tab3 = st.tabs(["🔑 Entrar", "📝 Cadastrar BP", "🔒 Esqueci a Senha"])
-        
-        with tab1:
-            st.markdown("<br>", unsafe_allow_html=True)
-            bp_input = st.text_input("BP (Código Funcional)", key="login_bp")
-            senha_input = st.text_input("Senha Pessoal", type="password", key="login_senha")
+            """, unsafe_allow_html=True)
             
-            if st.button("Acessar Sistema", type="primary"):
-                if bp_input in st.session_state.usuarios and st.session_state.usuarios[bp_input]["senha"] == senha_input:
-                    st.session_state.usuario_logado = {"bp": bp_input, **st.session_state.usuarios[bp_input]}
-                    st.rerun()
-                else:
-                    st.error("⚠️ BP ou senha incorretos.")
-
-        with tab2:
-            st.markdown("<br>", unsafe_allow_html=True)
-            c_nome = st.text_input("Nome Completo")
-            c_bp = st.text_input("BP (Código Funcional)")
-            c_email = st.text_input("E-mail Corporativo (@latam.com)")
-            c_base = st.selectbox("Base Operacional", BASES_LATAM)
-            c_senha = st.text_input("Criar Senha Pessoal", type="password")
+            tab1, tab2, tab3 = st.tabs(["🔑 Entrar", "📝 Cadastrar BP", "🔒 Esqueci a Senha"])
             
-            if st.button("Concluir Cadastro 🚀", key="btn_cad"):
-                if not c_nome or not c_bp or not c_email or not c_senha:
-                    st.warning("⚠️ Preencha todos os campos.")
-                elif c_bp in st.session_state.usuarios:
-                    st.error("⚠️ Este BP já está cadastrado.")
-                else:
-                    st.session_state.usuarios[c_bp] = {"nome": c_nome, "base": c_base, "senha": c_senha, "email": c_email}
-                    st.success("🎉 Cadastro realizado com sucesso! Faça login na aba ao lado.")
-
-        with tab3:
-            st.markdown("<br>", unsafe_allow_html=True)
-            r_bp = st.text_input("Informe seu BP", key="rec_bp")
-            r_email = st.text_input("Informe seu E-mail Corporativo", key="rec_email")
-            r_novasenha = st.text_input("Definir Nova Senha Pessoal", type="password", key="rec_senha")
-            
-            if st.button("Enviar E-mail de Recuperação 🔒", key="btn_rec"):
-                if r_bp in st.session_state.usuarios and st.session_state.usuarios[r_bp]["email"] == r_email:
-                    st.session_state.usuarios[r_bp]["senha"] = r_novasenha
-                    usuario_alvo = st.session_state.usuarios[r_bp]
-                    sucesso_envio = enviar_email_smtp(r_email, usuario_alvo['nome'], r_novasenha)
-                    
-                    if sucesso_envio:
-                        st.success("🎉 Senha alterada e e-mail disparado com sucesso para o seu corporativo!")
+            with tab1:
+                st.markdown("<br>", unsafe_allow_html=True)
+                bp_input = st.text_input("BP (Código Funcional)", key="login_bp")
+                senha_input = st.text_input("Senha Pessoal", type="password", key="login_senha")
+                
+                if st.button("Acessar Sistema", type="primary"):
+                    if bp_input in st.session_state.usuarios and st.session_state.usuarios[bp_input]["senha"] == senha_input:
+                        st.session_state.usuario_logado = {"bp": bp_input, **st.session_state.usuarios[bp_input]}
+                        st.rerun()
                     else:
-                        st.warning("⚠️ Senha alterada, mas houve uma falha no envio do SMTP. Verifique os Secrets.")
-                else:
-                    st.error("⚠️ BP ou e-mail não conferem com os registros.")
+                        st.error("⚠️ BP ou senha incorretos.")
+
+            with tab2:
+                st.markdown("<br>", unsafe_allow_html=True)
+                c_nome = st.text_input("Nome Completo")
+                c_bp = st.text_input("BP (Código Funcional)", key="cad_bp")
+                c_email = st.text_input("E-mail Corporativo (@latam.com)", key="cad_email")
+                c_base = st.selectbox("Base Operacional", BASES_LATAM)
+                c_senha = st.text_input("Criar Senha Pessoal", type="password", key="cad_senha")
+                
+                if st.button("Concluir Cadastro 🚀", key="btn_cad"):
+                    if not c_nome or not c_bp or not c_email or not c_senha:
+                        st.warning("⚠️ Preencha todos os campos.")
+                    elif c_bp in st.session_state.usuarios:
+                        st.error("⚠️ Este BP já está cadastrado.")
+                    else:
+                        st.session_state.usuarios[c_bp] = {"nome": c_nome, "base": c_base, "senha": c_senha, "email": c_email}
+                        st.success("🎉 Cadastro realizado com sucesso! Faça login na aba ao lado.")
+
+            with tab3:
+                st.markdown("<br>", unsafe_allow_html=True)
+                r_bp = st.text_input("Informe seu BP", key="rec_bp")
+                r_email = st.text_input("Informe seu E-mail Corporativo", key="rec_email")
+                r_novasenha = st.text_input("Definir Nova Senha Pessoal", type="password", key="rec_senha")
+                
+                if st.button("Enviar E-mail de Recuperação 🔒", key="btn_rec"):
+                    if r_bp in st.session_state.usuarios and st.session_state.usuarios[r_bp]["email"] == r_email:
+                        st.session_state.usuarios[r_bp]["senha"] = r_novasenha
+                        usuario_alvo = st.session_state.usuarios[r_bp]
+                        sucesso_envio = enviar_email_smtp(r_email, usuario_alvo['nome'], r_novasenha)
+                        
+                        if sucesso_envio:
+                            st.success("🎉 Senha alterada e e-mail disparado com sucesso para o seu corporativo!")
+                        else:
+                            st.warning("⚠️ Senha alterada, mas houve uma falha no envio do SMTP. Verifique os Secrets.")
+                    else:
+                        st.error("⚠️ BP ou e-mail não conferem com os registros.")
 
 else:
     # APLICAÇÃO PRINCIPAL COM SIDEBAR LATAM ESTILIZADA
@@ -313,69 +245,65 @@ else:
         recebidos_count = len([p for p in pedidos_base if p['status'] == "Recebido"])
         
         with col1:
-            st.markdown(f"""
-                <div class='card-metric'>
-                    <span>PEDIDOS PENDENTES</span>
-                    <h3>{pendentes_count}</h3>
-                </div>
-            """, unsafe_allow_html=True)
+            with st.container(border=True):
+                st.markdown("<span style='font-size: 13px; font-weight: 700; color: #94A3B8; letter-spacing: 1px;'>PEDIDOS PENDENTES</span>", unsafe_allow_html=True)
+                st.markdown(f"<h3 style='font-size: 38px; font-weight: 800; color: #FFFFFF; margin-top: 5px;'>{pendentes_count}</h3>", unsafe_allow_html=True)
             
         with col2:
-            st.markdown(f"""
-                <div class='card-metric success'>
-                    <span>PEDIDOS APROVADOS / RECEBIDOS</span>
-                    <h3>{recebidos_count}</h3>
-                </div>
-            """, unsafe_allow_html=True)
+            with st.container(border=True):
+                st.markdown("<span style='font-size: 13px; font-weight: 700; color: #38A169; letter-spacing: 1px;'>PEDIDOS APROVADOS / RECEBIDOS</span>", unsafe_allow_html=True)
+                st.markdown(f"<h3 style='font-size: 38px; font-weight: 800; color: #FFFFFF; margin-top: 5px;'>{recebidos_count}</h3>", unsafe_allow_html=True)
             
         st.markdown("### 📋 Histórico de Solicitações da Base")
-        if pedidos_base:
-            df_base = pd.DataFrame(pedidos_base)[['id', 'data', 'solicitante', 'valorTotal', 'status']]
-            df_base.columns = ["ID PEDIDO", "DATA", "SOLICITANTE", "VALOR TOTAL (R$)", "STATUS"]
-            st.dataframe(df_base, use_container_width=True)
-        else:
-            st.info("Nenhum pedido registado para esta base ainda.")
+        with st.container(border=True):
+            if pedidos_base:
+                df_base = pd.DataFrame(pedidos_base)[['id', 'data', 'solicitante', 'valorTotal', 'status']]
+                df_base.columns = ["ID PEDIDO", "DATA", "SOLICITANTE", "VALOR TOTAL (R$)", "STATUS"]
+                st.dataframe(df_base, use_container_width=True)
+            else:
+                st.info("Nenhum pedido registado para esta base ainda.")
 
     elif menu == "📦 Solicitar Insumos":
         st.title("📦 Nova Requisição de Materiais")
         st.markdown("Selecione as quantidades desejadas para os itens abaixo:")
         
-        quantidades = {}
-        for idx, item in enumerate(CATALOGO_ITENS):
-            col1, col2, col3, col4 = st.columns([2, 4, 1, 1])
-            with col1:
-                st.text(item['pn'])
-            with col2:
-                st.text(item['descricao'])
-            with col3:
-                st.text(f"R$ {item['preco']:.2f}")
-            with col4:
-                quantidades[item['pn']] = st.number_input("Qtd", min_value=0, value=0, key=f"qtd_{idx}", label_visibility="collapsed")
-                
-        total_geral = sum(q * next(i['preco'] for i in CATALOGO_ITENS if i['pn'] == pn) for pn, q in quantidades.items() if q > 0)
-        st.markdown(f"### Valor Total Estimado: R$ {total_geral:,.2f}")
-        
-        if st.button("SALVAR E REGISTRAR PEDIDO 🚀", type="primary"):
-            itens_solicitados = []
-            for item in CATALOGO_ITENS:
-                qtd = quantidades[item['pn']]
-                if qtd > 0:
-                    itens_solicitados.append({**item, "quantidade": qtd})
+        with st.container(border=True):
+            quantidades = {}
+            for idx, item in enumerate(CATALOGO_ITENS):
+                col1, col2, col3, col4 = st.columns([2, 4, 1, 1])
+                with col1:
+                    st.text(item['pn'])
+                with col2:
+                    st.text(item['descricao'])
+                with col3:
+                    st.text(f"R$ {item['preco']:.2f}")
+                with col4:
+                    quantidades[item['pn']] = st.number_input("Qtd", min_value=0, value=0, key=f"qtd_{idx}", label_visibility="collapsed")
                     
-            if not itens_solicitados:
-                st.warning("⚠️ Insira ao menos uma quantidade desejada.")
-            else:
-                novo_pedido = {
-                    "id": f"PED-{user['base'].split(' - ')[0]}-{str(datetime.now().timestamp())[-4:]}",
-                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                    "base": user['base'],
-                    "solicitante": user['nome'],
-                    "valorTotal": total_geral,
-                    "status": "Pendente",
-                    "itens": itens_solicitados
-                }
-                st.session_state.pedidos.append(novo_pedido)
-                st.success(f"🎉 Pedido {novo_pedido['id']} registado com sucesso!")
+            total_geral = sum(q * next(i['preco'] for i in CATALOGO_ITENS if i['pn'] == pn) for pn, q in quantidades.items() if q > 0)
+            st.markdown(f"### Valor Total Estimado: R$ {total_geral:,.2f}")
+            
+            if st.button("SALVAR E REGISTRAR PEDIDO 🚀", type="primary"):
+                itens_solicitados = []
+                for item in CATALOGO_ITENS:
+                    qtd = quantidades[item['pn']]
+                    if qtd > 0:
+                        itens_solicitados.append({**item, "quantidade": qtd})
+                        
+                if not itens_solicitados:
+                    st.warning("⚠️ Insira ao menos uma quantidade desejada.")
+                else:
+                    novo_pedido = {
+                        "id": f"PED-{user['base'].split(' - ')[0]}-{str(datetime.now().timestamp())[-4:]}",
+                        "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "base": user['base'],
+                        "solicitante": user['nome'],
+                        "valorTotal": total_geral,
+                        "status": "Pendente",
+                        "itens": itens_solicitados
+                    }
+                    st.session_state.pedidos.append(novo_pedido)
+                    st.success(f"🎉 Pedido {novo_pedido['id']} registado com sucesso!")
 
     elif menu == "✅ Conferência e Ajustes":
         st.title("✅ Conferência, Ajustes e Confirmação de Recebimento")
@@ -385,72 +313,74 @@ else:
         if not ids_pedidos:
             st.info("Nenhum pedido disponível para conferência nesta base.")
         else:
-            pedido_selecionado_id = st.selectbox("Selecione o Pedido para Conferência", ids_pedidos)
-            pedido = next(p for p in pedidos_base if p['id'] == pedido_selecionado_id)
-            
-            st.markdown(f"**Status Atual:** `{pedido['status']}`")
-            
-            df_itens = pd.DataFrame(pedido['itens'])
-            edited_df = st.data_editor(df_itens, num_rows="dynamic", use_container_width=True)
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("✅ Salvar Ajustes & Confirmar Recebimento", type="primary"):
-                    novos_itens = edited_df.to_dict(orient="records")
-                    pedido['itens'] = novos_itens
-                    pedido['status'] = "Recebido"
-                    st.success(f"🎉 Pedido {pedido['id']} confirmado e atualizado com sucesso!")
-                    st.rerun()
-                    
-            with col2:
-                csv_linhas = ["Item;Quantidade"]
-                for i in pedido['itens']:
-                    csv_linhas.append(f"{i['pn']} - {i['descricao']};{i['quantidade']}")
-                csv_data = "\n".join(csv_linhas)
+            with st.container(border=True):
+                pedido_selecionado_id = st.selectbox("Selecione o Pedido para Conferência", ids_pedidos)
+                pedido = next(p for p in pedidos_base if p['id'] == pedido_selecionado_id)
                 
-                st.download_button(
-                    label="📥 Baixar Planilha Insumos (.csv) LATAM",
-                    data=csv_data,
-                    file_name=f"Insumos_Conferidos_{pedido['base'].split(' - ')[0]}_{pedido['id']}.csv",
-                    mime="text/csv"
-                )
+                st.markdown(f"**Status Atual:** `{pedido['status']}`")
+                
+                df_itens = pd.DataFrame(pedido['itens'])
+                edited_df = st.data_editor(df_itens, num_rows="dynamic", use_container_width=True)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("✅ Salvar Ajustes & Confirmar Recebimento", type="primary"):
+                        novos_itens = edited_df.to_dict(orient="records")
+                        pedido['itens'] = novos_itens
+                        pedido['status'] = "Recebido"
+                        st.success(f"🎉 Pedido {pedido['id']} confirmado e atualizado com sucesso!")
+                        st.rerun()
+                        
+                with col2:
+                    csv_linhas = ["Item;Quantidade"]
+                    for i in pedido['itens']:
+                        csv_linhas.append(f"{i['pn']} - {i['descricao']};{i['quantidade']}")
+                    csv_data = "\n".join(csv_linhas)
+                    
+                    st.download_button(
+                        label="📥 Baixar Planilha Insumos (.csv) LATAM",
+                        data=csv_data,
+                        file_name=f"Insumos_Conferidos_{pedido['base'].split(' - ')[0]}_{pedido['id']}.csv",
+                        mime="text/csv"
+                    )
 
     elif menu == "📋 Histórico Geral":
         st.title("📊 Auditoria e Histórico Geral")
         st.markdown("Consolidado de todas as solicitações e conferências da rede LATAM Cargo.")
         
-        if st.session_state.pedidos:
-            df_geral = pd.DataFrame(st.session_state.pedidos)[['id', 'data', 'base', 'solicitante', 'valorTotal', 'status']]
-            df_geral.columns = ["ID", "DATA", "BASE", "SOLICITANTE", "VALOR TOTAL (R$)", "STATUS"]
-            st.dataframe(df_geral, use_container_width=True)
-        else:
-            st.info("Nenhum pedido registado no sistema global.")
+        with st.container(border=True):
+            if st.session_state.pedidos:
+                df_geral = pd.DataFrame(st.session_state.pedidos)[['id', 'data', 'base', 'solicitante', 'valorTotal', 'status']]
+                df_geral.columns = ["ID", "DATA", "BASE", "SOLICITANTE", "VALOR TOTAL (R$)", "STATUS"]
+                st.dataframe(df_geral, use_container_width=True)
+            else:
+                st.info("Nenhum pedido registado no sistema global.")
 
     elif menu == "💡 Sugestões e Erros":
         st.title("💡 Central de Feedback, Sugestões e Erros")
         st.markdown("Encontrou algum problema no sistema ou tem uma ideia de melhoria? Envie uma mensagem direta para a equipe de desenvolvimento.")
         
-        formspree_html = f"""
-        <form action="https://formspree.io/f/mrenybwd" method="POST" style="background: #1E293B; padding: 30px; border-radius: 12px; border: 1px solid #334155; color: #F8FAFC;">
-            <input type="hidden" name="Colaborador" value="{user['nome']} (BP: {user['bp']})">
-            <input type="hidden" name="Base" value="{user['base']}">
-            
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #94A3B8;">TIPO DE MENSAGEM</label>
-                <select name="Tipo" style="width: 100%; padding: 12px; border-radius: 8px; background: #0F172A; color: #FFF; border: 1px solid #334155;">
-                    <option value="Sugestao">💡 Sugestão de Melhoria</option>
-                    <option value="Erro">🛠️ Reportar Erro / Bug</option>
-                    <option value="Outro">📌 Outro Assunto</option>
-                </select>
-            </div>
-            
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #94A3B8;">DETALHES DA MENSAGEM</label>
-                <textarea name="Mensagem" rows="5" placeholder="Descreva aqui sua sugestão ou o erro encontrado..." style="width: 100%; padding: 12px; border-radius: 8px; background: #0F172A; color: #FFF; border: 1px solid #334155;" required></textarea>
-            </div>
-            
-            <button type="submit" style="background: #E2001A; color: white; padding: 14px 20px; border: none; border-radius: 8px; font-weight: 700; width: 100%; cursor: pointer;">Enviar Mensagem 🚀</button>
-        </form>
-        """
-        
-        st.markdown(formspree_html, unsafe_allow_html=True)
+        with st.container(border=True):
+            formspree_html = f"""
+            <form action="https://formspree.io/f/mrenybwd" method="POST" style="color: #F8FAFC;">
+                <input type="hidden" name="Colaborador" value="{user['nome']} (BP: {user['bp']})">
+                <input type="hidden" name="Base" value="{user['base']}">
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #94A3B8;">TIPO DE MENSAGEM</label>
+                    <select name="Tipo" style="width: 100%; padding: 12px; border-radius: 8px; background: #0F172A; color: #FFF; border: 1px solid #334155;">
+                        <option value="Sugestao">💡 Sugestão de Melhoria</option>
+                        <option value="Erro">🛠️ Reportar Erro / Bug</option>
+                        <option value="Outro">📌 Outro Assunto</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #94A3B8;">DETALHES DA MENSAGEM</label>
+                    <textarea name="Mensagem" rows="5" placeholder="Descreva aqui sua sugestão ou o erro encontrado..." style="width: 100%; padding: 12px; border-radius: 8px; background: #0F172A; color: #FFF; border: 1px solid #334155;" required></textarea>
+                </div>
+                
+                <button type="submit" style="background: #E2001A; color: white; padding: 14px 20px; border: none; border-radius: 8px; font-weight: 700; width: 100%; cursor: pointer;">Enviar Mensagem 🚀</button>
+            </form>
+            """
+            st.markdown(formspree_html, unsafe_allow_html=True)
