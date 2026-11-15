@@ -15,13 +15,17 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilização CSS refinada para harmonizar com o Dark Mode e cantos arredondados
+# Estilização CSS refinada idêntica ao design corporativo desejado
 st.markdown("""
     <style>
+        /* Ajuste do fundo e fontes globais */
+        .main { background-color: #121824; color: #F8FAFC; }
+        
+        /* Botões Padrão LATAM */
         .stButton>button {
             background-color: #E2001A !important;
             color: #FFFFFF !important;
-            border-radius: 10px !important;
+            border-radius: 8px !important;
             font-weight: 700 !important;
             height: 48px !important;
             border: none !important;
@@ -30,6 +34,29 @@ st.markdown("""
         }
         .stButton>button:hover {
             background-color: #C50017 !important;
+        }
+        
+        /* Ocultar bolinhas e estilizar menu lateral */
+        div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label div:first-child {
+            display: none !important;
+        }
+        div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label {
+            background-color: #1E293B !important;
+            padding: 12px 16px !important;
+            border-radius: 8px !important;
+            margin-bottom: 8px !important;
+            border: 1px solid #334155 !important;
+            color: #F8FAFC !important;
+            font-weight: 600 !important;
+        }
+        div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label:hover {
+            background-color: rgba(226, 0, 26, 0.15) !important;
+            border-color: #E2001A !important;
+            color: #FFFFFF !important;
+        }
+        div[data-testid="stSidebar"] .stRadio label p {
+            font-size: 15px !important;
+            font-family: 'Segoe UI', sans-serif !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -43,7 +70,6 @@ def carregar_usuarios():
         with open(ARQUIVO_USUARIOS, "r", encoding="utf-8") as f:
             return json.load(f)
     else:
-        # Usuário padrão inicial
         usuarios_padrao = {
             "4872423": {"nome": "Isadora Sousa Lima", "base": "FOR - Fortaleza", "senha": "123", "email": "isadora@latam.com"}
         }
@@ -185,7 +211,7 @@ if not st.session_state.usuario_logado:
                 </div>
             """, unsafe_allow_html=True)
             
-            tab1, tab2, tab3 = st.tabs(["🔑 Entrar", "📝 Cadastrar BP", "🔒 Esqueci a Senha"])
+            tab1, tab2, tab3 = st.tabs(["Entrar", "Cadastrar BP", "Esqueci a Senha"])
             
             with tab1:
                 st.markdown("<br>", unsafe_allow_html=True)
@@ -207,7 +233,7 @@ if not st.session_state.usuario_logado:
                 c_base = st.selectbox("Base Operacional", BASES_LATAM)
                 c_senha = st.text_input("Criar Senha Pessoal", type="password", key="cad_senha")
                 
-                if st.button("Concluir Cadastro 🚀", key="btn_cad"):
+                if st.button("Concluir Cadastro", key="btn_cad"):
                     if not c_nome or not c_bp or not c_email or not c_senha:
                         st.warning("⚠️ Preencha todos os campos.")
                     elif c_bp in usuarios_db:
@@ -223,7 +249,7 @@ if not st.session_state.usuario_logado:
                 r_email = st.text_input("Informe seu E-mail Corporativo", key="rec_email")
                 r_novasenha = st.text_input("Definir Nova Senha Pessoal", type="password", key="rec_senha")
                 
-                if st.button("Enviar E-mail de Recuperação 🔒", key="btn_rec"):
+                if st.button("Enviar E-mail de Recuperação", key="btn_rec"):
                     if r_bp in usuarios_db and usuarios_db[r_bp]["email"] == r_email:
                         usuarios_db[r_bp]["senha"] = r_novasenha
                         salvar_usuarios_arquivo(usuarios_db)
@@ -237,33 +263,45 @@ if not st.session_state.usuario_logado:
                         st.error("⚠️ BP ou e-mail não conferem com os registros.")
 
 else:
-    # APLICAÇÃO PRINCIPAL COM SIDEBAR LATAM ESTILIZADA
+    # APLICAÇÃO PRINCIPAL COM CABEÇALHO LATERAL LIMPO
     user = st.session_state.usuario_logado
     
     st.sidebar.markdown("""
         <div style="padding: 10px 0; border-bottom: 1px solid #334155; margin-bottom: 20px;">
             <h2 style="font-size: 20px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h2>
-            <p style="font-size: 12px; color: #94A3B8; margin-top: 4px;">WMS & Insumos Corporativo</p>
+            <p style="font-size: 12px; color: #94A3B8; margin-top: 4px;">WMS & Logística</p>
         </div>
     """, unsafe_allow_html=True)
     
-    st.sidebar.markdown(f"**Colaborador:** {user['nome']}")
-    st.sidebar.markdown(f"**Base:** {user['base']}")
-    st.sidebar.markdown(f"**BP:** {user['bp']}")
-    st.sidebar.markdown("---")
+    menu = st.sidebar.radio("Menu de Navegação", [
+        "Painel de Gestão", 
+        "Solicitar Insumos", 
+        "Conferência e Ajustes", 
+        "Histórico Geral", 
+        "Sugestões e Erros"
+    ], label_visibility="collapsed")
     
-    menu = st.sidebar.radio("Menu de Navegação", ["📊 Painel de Gestão", "📦 Solicitar Insumos", "✅ Conferência e Ajustes", "📋 Histórico Geral", "💡 Sugestões e Erros"])
-    
     st.sidebar.markdown("---")
-    if st.sidebar.button("🚪 Sair do Sistema", type="secondary"):
+    if st.sidebar.button("Sair do Sistema", type="secondary"):
         st.session_state.usuario_logado = None
         st.rerun()
 
     pedidos_base = [p for p in pedidos_db if p['base'] == user['base']]
 
-    if menu == "📊 Painel de Gestão":
-        st.title(f"Painel WMS - Base {user['base']}")
-        st.markdown("Visão geral de operações e solicitações de insumos da base.")
+    if menu == "Painel de Gestão":
+        # CABEÇALHO IDÊNTICO AO PROTÓTIPO EM HTML (BLOCOS ROXOS ARREDONDADOS)
+        st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #2A0052 0%, #1A0033 100%); padding: 25px 30px; border-radius: 16px; border: 1px solid #4C1D95; box-shadow: 0 8px 20px rgba(0,0,0,0.4); display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <div>
+                    <h1 style="color: #FFFFFF; font-size: 28px; font-weight: 800; margin: 0;">Painel WMS - Base {user['base'].split(' - ')[0]}</h1>
+                    <p style="color: #C4B5FD; font-size: 14px; margin: 5px 0 0 0;">Visão geral de operações e solicitações de insumos</p>
+                </div>
+                <div style="text-align: right;">
+                    <span style="color: #FFFFFF; font-size: 16px; font-weight: 700; display: block;">{user['nome']}</span>
+                    <span style="color: #A78BFA; font-size: 13px;">Base: {user['base']} (BP: {user['bp']})</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
         
         col1, col2 = st.columns(2)
         pendentes_count = len([p for p in pedidos_base if p['status'] == "Pendente"])
@@ -271,15 +309,15 @@ else:
         
         with col1:
             with st.container(border=True):
-                st.markdown("<span style='font-size: 13px; font-weight: 700; color: #94A3B8; letter-spacing: 1px;'>PEDIDOS PENDENTES</span>", unsafe_allow_html=True)
+                st.markdown("<span style='font-size: 12px; font-weight: 700; color: #94A3B8; letter-spacing: 1px;'>PEDIDOS PENDENTES</span>", unsafe_allow_html=True)
                 st.markdown(f"<h3 style='font-size: 38px; font-weight: 800; color: #FFFFFF; margin-top: 5px;'>{pendentes_count}</h3>", unsafe_allow_html=True)
             
         with col2:
             with st.container(border=True):
-                st.markdown("<span style='font-size: 13px; font-weight: 700; color: #38A169; letter-spacing: 1px;'>PEDIDOS APROVADOS / RECEBIDOS</span>", unsafe_allow_html=True)
+                st.markdown("<span style='font-size: 12px; font-weight: 700; color: #38A169; letter-spacing: 1px;'>PEDIDOS APROVADOS / RECEBIDOS</span>", unsafe_allow_html=True)
                 st.markdown(f"<h3 style='font-size: 38px; font-weight: 800; color: #FFFFFF; margin-top: 5px;'>{recebidos_count}</h3>", unsafe_allow_html=True)
             
-        st.markdown("### 📋 Histórico de Solicitações da Base")
+        st.markdown("### Histórico de Solicitações da Base")
         with st.container(border=True):
             if pedidos_base:
                 df_base = pd.DataFrame(pedidos_base)[['id', 'data', 'solicitante', 'valorTotal', 'status']]
@@ -288,8 +326,8 @@ else:
             else:
                 st.info("Nenhum pedido registado para esta base ainda.")
 
-    elif menu == "📦 Solicitar Insumos":
-        st.title("📦 Nova Requisição de Materiais")
+    elif menu == "Solicitar Insumos":
+        st.title("Nova Requisição de Materiais")
         st.markdown("Selecione as quantidades desejadas para os itens abaixo:")
         
         with st.container(border=True):
@@ -308,7 +346,7 @@ else:
             total_geral = sum(q * next(i['preco'] for i in CATALOGO_ITENS if i['pn'] == pn) for pn, q in quantidades.items() if q > 0)
             st.markdown(f"### Valor Total Estimado: R$ {total_geral:,.2f}")
             
-            if st.button("SALVAR E REGISTRAR PEDIDO 🚀", type="primary"):
+            if st.button("SALVAR E REGISTRAR PEDIDO", type="primary"):
                 itens_solicitados = []
                 for item in CATALOGO_ITENS:
                     qtd = quantidades[item['pn']]
@@ -332,8 +370,8 @@ else:
                     st.success(f"🎉 Pedido {novo_pedido['id']} registado com sucesso!")
                     st.rerun()
 
-    elif menu == "✅ Conferência e Ajustes":
-        st.title("✅ Conferência, Ajustes e Confirmação de Recebimento")
+    elif menu == "Conferência e Ajustes":
+        st.title("Conferência, Ajustes e Confirmação de Recebimento")
         st.markdown("Ajuste quantidades ou nomes divergentes conforme o que chegou fisicamente na base, confirme e baixe o CSV final.")
         
         ids_pedidos = [p['id'] for p in pedidos_base]
@@ -351,7 +389,7 @@ else:
                 
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button("✅ Salvar Ajustes & Confirmar Recebimento", type="primary"):
+                    if st.button("Salvar Ajustes & Confirmar Recebimento", type="primary"):
                         novos_itens = edited_df.to_dict(orient="records")
                         pedido['itens'] = novos_itens
                         pedido['status'] = "Recebido"
@@ -366,14 +404,14 @@ else:
                     csv_data = "\n".join(csv_linhas)
                     
                     st.download_button(
-                        label="📥 Baixar Planilha Insumos (.csv) LATAM",
+                        label="Baixar Planilha Insumos (.csv) LATAM",
                         data=csv_data,
                         file_name=f"Insumos_Conferidos_{pedido['base'].split(' - ')[0]}_{pedido['id']}.csv",
                         mime="text/csv"
                     )
 
-    elif menu == "📋 Histórico Geral":
-        st.title("📊 Auditoria e Histórico Geral")
+    elif menu == "Histórico Geral":
+        st.title("Auditoria e Histórico Geral")
         st.markdown("Consolidado de todas as solicitações e conferências da rede LATAM Cargo.")
         
         with st.container(border=True):
@@ -384,8 +422,8 @@ else:
             else:
                 st.info("Nenhum pedido registado no sistema global.")
 
-    elif menu == "💡 Sugestões e Erros":
-        st.title("💡 Central de Feedback, Sugestões e Erros")
+    elif menu == "Sugestões e Erros":
+        st.title("Central de Feedback, Sugestões e Erros")
         st.markdown("Encontrou algum problema no sistema ou tem uma ideia de melhoria? Envie uma mensagem direta para a equipe de desenvolvimento.")
         
         with st.container(border=True):
