@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import bcrypt
 import os
 
 # Configuração da Página
@@ -88,7 +87,7 @@ BASES_LATAM = [
     "VCP - Campinas (Viracopos)", "VIX - Vitória"
 ]
 
-# Inicialização do Estado da Sessão (Simulando Banco local/memória para transição)
+# Inicialização do Estado da Sessão
 if 'usuarios' not in st.session_state:
     st.session_state.usuarios = {
         "123456": {"nome": "Francisco Gleison", "base": "FOR - Fortaleza", "senha": "123", "email": "francisco@latam.com"}
@@ -158,8 +157,9 @@ else:
     st.sidebar.markdown(f"**BP:** {user['bp']}")
     st.sidebar.markdown("---")
     
-    menu = st.sidebar.radio("Menu de Navegação", ["📊 Painel de Gestão", "📦 Solicitar Insumos", "✅ Conferência e Ajustes", "📋 Histórico Geral"])
+    menu = st.sidebar.radio("Menu de Navegação", ["📊 Painel de Gestão", "📦 Solicitar Insumos", "✅ Conferência e Ajustes", "📋 Histórico Geral", "💡 Sugestões e Erros"])
     
+    st.sidebar.markdown("---")
     if st.sidebar.button("🚪 Sair do Sistema", type="secondary"):
         st.session_state.usuario_logado = None
         st.rerun()
@@ -261,7 +261,6 @@ else:
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("✅ Salvar Ajustes & Confirmar Recebimento", type="primary"):
-                    # Atualiza os itens com base na edição do usuário
                     novos_itens = edited_df.to_dict(orient="records")
                     pedido['itens'] = novos_itens
                     pedido['status'] = "Recebido"
@@ -269,7 +268,6 @@ else:
                     st.rerun()
                     
             with col2:
-                # Botão para Download do CSV formatado LATAM
                 csv_linhas = ["Item;Quantidade"]
                 for i in pedido['itens']:
                     csv_linhas.append(f"{i['pn']} - {i['descricao']};{i['quantidade']}")
@@ -292,3 +290,33 @@ else:
             st.dataframe(df_geral, use_container_width=True)
         else:
             st.info("Nenhum pedido registado no sistema global.")
+
+    elif menu == "💡 Sugestões e Erros":
+        st.title("💡 Central de Feedback, Sugestões e Erros")
+        st.markdown("Encontrou algum problema no sistema ou tem uma ideia de melhoria? Envie uma mensagem direta para a equipe de desenvolvimento.")
+        
+        # Formulário HTML integrado com o Formspree
+        formspree_html = f"""
+        <form action="https://formspree.io/f/mrenybwd" method="POST" style="background: #1E293B; padding: 30px; border-radius: 12px; border: 1px solid #334155; color: #F8FAFC;">
+            <input type="hidden" name="Colaborador" value="{user['nome']} (BP: {user['bp']})">
+            <input type="hidden" name="Base" value="{user['base']}">
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #94A3B8;">TIPO DE MENSAGEM</label>
+                <select name="Tipo" style="width: 100%; padding: 12px; border-radius: 8px; background: #0F172A; color: #FFF; border: 1px solid #334155;">
+                    <option value="Sugestao">💡 Sugestão de Melhoria</option>
+                    <option value="Erro">🛠️ Reportar Erro / Bug</option>
+                    <option value="Outro">📌 Outro Assunto</option>
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #94A3B8;">DETALHES DA MENSAGEM</label>
+                <textarea name="Mensagem" rows="5" placeholder="Descreva aqui sua sugestão ou o erro encontrado..." style="width: 100%; padding: 12px; border-radius: 8px; background: #0F172A; color: #FFF; border: 1px solid #334155;" required></textarea>
+            </div>
+            
+            <button type="submit" style="background: #E2001A; color: white; padding: 14px 20px; border: none; border-radius: 8px; font-weight: 700; width: 100%; cursor: pointer;">Enviar Mensagem 🚀</button>
+        </form>
+        """
+        
+        st.markdown(formspree_html, unsafe_allow_html=True)
