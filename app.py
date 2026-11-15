@@ -7,25 +7,101 @@ from email.mime.multipart import MIMEMultipart
 
 # Configuração da Página
 st.set_page_config(
-    page_title="LATAM Cargo | WMS & Insumos",
+    page_title="LATAM Cargo | WMS e Logística de Insumos",
     page_icon="✈️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Estilização CSS personalizada para identidade LATAM
+# Injeção do Design CSS Exato (Identidade LATAM & Dark Mode)
 st.markdown("""
     <style>
-        .main { background-color: #121824; color: #F8FAFC; }
-        .stButton>button { width: 100%; border-radius: 8px; font-weight: 700; height: 45px; }
-        .card-metric { background-color: #1E293B; padding: 20px; border-radius: 12px; border-left: 5px solid #E2001A; }
+        :root {
+            --primary: #1A0033;
+            --primary-light: #2A0052;
+            --latam-red: #E2001A;
+            --bg-light: #121824;
+            --card-bg: #1E293B;
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+            --border-color: #334155;
+        }
+
+        .main { background-color: var(--bg-light); color: var(--text-main); font-family: 'Segoe UI', sans-serif; }
+        
+        /* Ajustes visuais globais do Streamlit para combinar com o layout */
+        [data-testid="stSidebar"] {
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+        }
+        
+        .stButton>button {
+            background-color: var(--latam-red) !important;
+            color: #FFFFFF !important;
+            border-radius: 8px !important;
+            font-weight: 700 !important;
+            height: 48px !important;
+            border: none !important;
+            width: 100% !important;
+            transition: background 0.2s;
+        }
+        .stButton>button:hover {
+            background-color: #C50017 !important;
+        }
+
+        /* Cards de Métricas Personalizados */
+        .card-metric {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border-left: 6px solid var(--latam-red);
+            border-top: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        .card-metric.success {
+            border-left-color: #38A169;
+        }
+        .card-metric span {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+        .card-metric h3 {
+            font-size: 38px;
+            font-weight: 800;
+            color: #FFFFFF;
+            margin-top: 8px;
+            margin-bottom: 0px;
+        }
+
+        /* Estilização de abas e inputs */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 10px;
+            background-color: transparent;
+        }
+        .stTabs [data-baseweb="tab"] {
+            background-color: var(--card-bg);
+            border-radius: 8px 8px 0px 0px;
+            color: var(--text-muted);
+            font-weight: 700;
+            padding: 10px 20px;
+            border: 1px solid var(--border-color);
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: var(--primary-light) !important;
+            color: #FFFFFF !important;
+            border-bottom-color: var(--latam-red) !important;
+        }
     </style>
 """, unsafe_allow_html=True)
 
 # Função para Disparo Real de E-mail via SMTP (Recuperação de Senha)
 def enviar_email_smtp(destinatario_email, nome_usuario, nova_senha):
     try:
-        # Pega as credenciais de forma segura do st.secrets configurado na nuvem
         servidor_smtp = "smtp.gmail.com"
         porta_smtp = 587
         remetente_email = st.secrets["EMAIL_USUARIO"]
@@ -42,8 +118,6 @@ def enviar_email_smtp(destinatario_email, nome_usuario, nova_senha):
         Recebemos uma solicitação de redefinição de senha para o seu acesso ao WMS de Insumos da LATAM Cargo.
         
         Sua nova senha temporária cadastrada é: {nova_senha}
-        
-        Recomendamos que faça o login com ela e altere ou mantenha sua preferência de acesso com segurança.
         
         Atenciosamente,
         Equipe de Logística / WMS LATAM Cargo
@@ -139,69 +213,82 @@ if 'pedidos' not in st.session_state:
 if 'usuario_logado' not in st.session_state:
     st.session_state.usuario_logado = None
 
-# TELA DE AUTENTICAÇÃO
+# TELA DE AUTENTICAÇÃO COM LAYOUT REFINADO
 if not st.session_state.usuario_logado:
-    st.markdown("<h1 style='text-align: center; color: #FFFFFF;'>LATAM <span style='color: #E2001A;'>Cargo</span></h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #94A3B8;'>WMS e Logística de Insumos - Acesso Corporativo</p>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1.2, 1])
     
-    tab1, tab2, tab3 = st.tabs(["🔑 Entrar", "📝 Cadastrar BP", "🔒 Esqueci a Senha"])
-    
-    with tab1:
-        st.subheader("Acesso ao Sistema")
-        bp_input = st.text_input("BP (Código Funcional)", key="login_bp")
-        senha_input = st.text_input("Senha Pessoal", type="password", key="login_senha")
+    with col2:
+        st.markdown("""
+            <div style="background: #1E293B; padding: 40px; border-radius: 16px; border: 1px solid #334155; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <h1 style="font-size: 30px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h1>
+                    <p style="font-size: 14px; color: #94A3B8; margin-top: 8px;">WMS e Logística de Insumos - Acesso Corporativo</p>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
         
-        if st.button("Acessar Sistema", type="primary"):
-            if bp_input in st.session_state.usuarios and st.session_state.usuarios[bp_input]["senha"] == senha_input:
-                st.session_state.usuario_logado = {"bp": bp_input, **st.session_state.usuarios[bp_input]}
-                st.rerun()
-            else:
-                st.error("⚠️ BP ou senha incorretos.")
-
-    with tab2:
-        st.subheader("Cadastro de Novo Colaborador")
-        c_nome = st.text_input("Nome Completo")
-        c_bp = st.text_input("BP (Código Funcional)")
-        c_email = st.text_input("E-mail Corporativo (@latam.com)")
-        c_base = st.selectbox("Base Operacional", BASES_LATAM)
-        c_senha = st.text_input("Criar Senha Pessoal", type="password")
+        tab1, tab2, tab3 = st.tabs(["🔑 Entrar", "📝 Cadastrar BP", "🔒 Esqueci a Senha"])
         
-        if st.button("Concluir Cadastro 🚀"):
-            if not c_nome or not c_bp or not c_email or not c_senha:
-                st.warning("⚠️ Preencha todos os campos.")
-            elif c_bp in st.session_state.usuarios:
-                st.error("⚠️ Este BP já está cadastrado.")
-            else:
-                st.session_state.usuarios[c_bp] = {"nome": c_nome, "base": c_base, "senha": c_senha, "email": c_email}
-                st.success("🎉 Cadastro realizado com sucesso! Faça login na aba ao lado.")
-
-    with tab3:
-        st.subheader("Recuperação de Senha por E-mail")
-        r_bp = st.text_input("Informe seu BP", key="rec_bp")
-        r_email = st.text_input("Informe seu E-mail Corporativo", key="rec_email")
-        r_novasenha = st.text_input("Definir Nova Senha Pessoal", type="password", key="rec_senha")
-        
-        if st.button("Enviar E-mail de Recuperação 🔒"):
-            if r_bp in st.session_state.usuarios and st.session_state.usuarios[r_bp]["email"] == r_email:
-                # Atualiza a senha no sistema
-                st.session_state.usuarios[r_bp]["senha"] = r_novasenha
-                
-                # Dispara o e-mail real via SMTP
-                usuario_alvo = st.session_state.usuarios[r_bp]
-                sucesso_envio = enviar_email_smtp(r_email, usuario_alvo['nome'], r_novasenha)
-                
-                if sucesso_envio:
-                    st.success("🎉 Senha alterada e e-mail de confirmação disparado com sucesso para o seu corporativo!")
+        with tab1:
+            st.markdown("<br>", unsafe_allow_html=True)
+            bp_input = st.text_input("BP (Código Funcional)", key="login_bp")
+            senha_input = st.text_input("Senha Pessoal", type="password", key="login_senha")
+            
+            if st.button("Acessar Sistema", type="primary"):
+                if bp_input in st.session_state.usuarios and st.session_state.usuarios[bp_input]["senha"] == senha_input:
+                    st.session_state.usuario_logado = {"bp": bp_input, **st.session_state.usuarios[bp_input]}
+                    st.rerun()
                 else:
-                    st.warning("⚠️ Senha alterada com sucesso, mas houve uma falha no envio do e-mail SMTP. Verifique as credenciais nos Secrets.")
-            else:
-                st.error("⚠️ BP ou e-mail não conferem com os registros do sistema.")
+                    st.error("⚠️ BP ou senha incorretos.")
+
+        with tab2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            c_nome = st.text_input("Nome Completo")
+            c_bp = st.text_input("BP (Código Funcional)")
+            c_email = st.text_input("E-mail Corporativo (@latam.com)")
+            c_base = st.selectbox("Base Operacional", BASES_LATAM)
+            c_senha = st.text_input("Criar Senha Pessoal", type="password")
+            
+            if st.button("Concluir Cadastro 🚀", key="btn_cad"):
+                if not c_nome or not c_bp or not c_email or not c_senha:
+                    st.warning("⚠️ Preencha todos os campos.")
+                elif c_bp in st.session_state.usuarios:
+                    st.error("⚠️ Este BP já está cadastrado.")
+                else:
+                    st.session_state.usuarios[c_bp] = {"nome": c_nome, "base": c_base, "senha": c_senha, "email": c_email}
+                    st.success("🎉 Cadastro realizado com sucesso! Faça login na aba ao lado.")
+
+        with tab3:
+            st.markdown("<br>", unsafe_allow_html=True)
+            r_bp = st.text_input("Informe seu BP", key="rec_bp")
+            r_email = st.text_input("Informe seu E-mail Corporativo", key="rec_email")
+            r_novasenha = st.text_input("Definir Nova Senha Pessoal", type="password", key="rec_senha")
+            
+            if st.button("Enviar E-mail de Recuperação 🔒", key="btn_rec"):
+                if r_bp in st.session_state.usuarios and st.session_state.usuarios[r_bp]["email"] == r_email:
+                    st.session_state.usuarios[r_bp]["senha"] = r_novasenha
+                    usuario_alvo = st.session_state.usuarios[r_bp]
+                    sucesso_envio = enviar_email_smtp(r_email, usuario_alvo['nome'], r_novasenha)
+                    
+                    if sucesso_envio:
+                        st.success("🎉 Senha alterada e e-mail disparado com sucesso para o seu corporativo!")
+                    else:
+                        st.warning("⚠️ Senha alterada, mas houve uma falha no envio do SMTP. Verifique os Secrets.")
+                else:
+                    st.error("⚠️ BP ou e-mail não conferem com os registros.")
 
 else:
-    # APLICAÇÃO PRINCIPAL (Pós-Login)
+    # APLICAÇÃO PRINCIPAL COM SIDEBAR LATAM ESTILIZADA
     user = st.session_state.usuario_logado
     
-    st.sidebar.markdown(f"## LATAM ✈️ Cargo")
+    st.sidebar.markdown("""
+        <div style="padding: 10px 0; border-bottom: 1px solid #334155; margin-bottom: 20px;">
+            <h2 style="font-size: 20px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h2>
+            <p style="font-size: 12px; color: #94A3B8; margin-top: 4px;">WMS & Insumos Corporativo</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
     st.sidebar.markdown(f"**Colaborador:** {user['nome']}")
     st.sidebar.markdown(f"**Base:** {user['base']}")
     st.sidebar.markdown(f"**BP:** {user['bp']}")
@@ -228,16 +315,16 @@ else:
         with col1:
             st.markdown(f"""
                 <div class='card-metric'>
-                    <span style='color: #94A3B8; font-weight: 700;'>PEDIDOS PENDENTES</span>
-                    <h1 style='color: #FFFFFF; font-size: 40px; margin-top: 5px;'>{pendentes_count}</h1>
+                    <span>PEDIDOS PENDENTES</span>
+                    <h3>{pendentes_count}</h3>
                 </div>
             """, unsafe_allow_html=True)
             
         with col2:
             st.markdown(f"""
-                <div class='card-metric' style='border-left-color: #38A169;'>
-                    <span style='color: #94A3B8; font-weight: 700;'>PEDIDOS APROVADOS / RECEBIDOS</span>
-                    <h1 style='color: #FFFFFF; font-size: 40px; margin-top: 5px;'>{recebidos_count}</h1>
+                <div class='card-metric success'>
+                    <span>PEDIDOS APROVADOS / RECEBIDOS</span>
+                    <h3>{recebidos_count}</h3>
                 </div>
             """, unsafe_allow_html=True)
             
@@ -265,7 +352,6 @@ else:
             with col4:
                 quantidades[item['pn']] = st.number_input("Qtd", min_value=0, value=0, key=f"qtd_{idx}", label_visibility="collapsed")
                 
-        # Calcular Total
         total_geral = sum(q * next(i['preco'] for i in CATALOGO_ITENS if i['pn'] == pn) for pn, q in quantidades.items() if q > 0)
         st.markdown(f"### Valor Total Estimado: R$ {total_geral:,.2f}")
         
@@ -304,7 +390,6 @@ else:
             
             st.markdown(f"**Status Atual:** `{pedido['status']}`")
             
-            # Tabela Editável de Itens
             df_itens = pd.DataFrame(pedido['itens'])
             edited_df = st.data_editor(df_itens, num_rows="dynamic", use_container_width=True)
             
@@ -345,7 +430,6 @@ else:
         st.title("💡 Central de Feedback, Sugestões e Erros")
         st.markdown("Encontrou algum problema no sistema ou tem uma ideia de melhoria? Envie uma mensagem direta para a equipe de desenvolvimento.")
         
-        # Formulário HTML integrado com o Formspree
         formspree_html = f"""
         <form action="https://formspree.io/f/mrenybwd" method="POST" style="background: #1E293B; padding: 30px; border-radius: 12px; border: 1px solid #334155; color: #F8FAFC;">
             <input type="hidden" name="Colaborador" value="{user['nome']} (BP: {user['bp']})">
