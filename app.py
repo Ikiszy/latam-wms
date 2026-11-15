@@ -69,7 +69,6 @@ def buscar_usuarios():
         response = supabase.table("usuarios").select("*").execute()
         usuarios_dict = {u["bp"]: u for u in response.data}
         if not usuarios_dict:
-            # Usuário padrão caso a tabela esteja totalmente vazia
             return {
                 "4872423": {"nome": "Isadora Sousa Lima", "base": "FOR - Fortaleza", "senha": "123", "email": "isadora@latam.com"}
             }
@@ -211,7 +210,7 @@ if 'usuario_logado' not in st.session_state:
 usuarios_db = buscar_usuarios()
 pedidos_db = buscar_pedidos()
 
-# TELA DE AUTENTICAÇÃO COM CARD ARREDONDADO
+# TELA DE AUTENTICAÇÃO COM SUPORTE A ENTER (st.form)
 if not st.session_state.usuario_logado:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.2, 1])
@@ -229,52 +228,59 @@ if not st.session_state.usuario_logado:
             
             with tab1:
                 st.markdown("<br>", unsafe_allow_html=True)
-                bp_input = st.text_input("BP (Código Funcional)", key="login_bp")
-                senha_input = st.text_input("Senha Pessoal", type="password", key="login_senha")
-                
-                if st.button("Acessar Sistema", type="primary"):
-                    if bp_input in usuarios_db and usuarios_db[bp_input]["senha"] == senha_input:
-                        st.session_state.usuario_logado = {"bp": bp_input, **usuarios_db[bp_input]}
-                        st.rerun()
-                    else:
-                        st.error("⚠️ BP ou senha incorretos.")
+                # st.form permite que ao preencher a senha e apertar Enter, o login seja acionado automaticamente
+                with st.form("form_login"):
+                    bp_input = st.text_input("BP (Código Funcional)")
+                    senha_input = st.text_input("Senha Pessoal", type="password")
+                    submit_login = st.form_submit_button("Acessar Sistema", type="primary")
+                    
+                    if submit_login:
+                        if bp_input in usuarios_db and usuarios_db[bp_input]["senha"] == senha_input:
+                            st.session_state.usuario_logado = {"bp": bp_input, **usuarios_db[bp_input]}
+                            st.rerun()
+                        else:
+                            st.error("⚠️ BP ou senha incorretos.")
 
             with tab2:
                 st.markdown("<br>", unsafe_allow_html=True)
-                c_nome = st.text_input("Nome Completo")
-                c_bp = st.text_input("BP (Código Funcional)", key="cad_bp")
-                c_email = st.text_input("E-mail Corporativo (@latam.com)", key="cad_email")
-                c_base = st.selectbox("Base Operacional", BASES_LATAM)
-                c_senha = st.text_input("Criar Senha Pessoal", type="password", key="cad_senha")
-                
-                if st.button("Concluir Cadastro", key="btn_cad"):
-                    if not c_nome or not c_bp or not c_email or not c_senha:
-                        st.warning("⚠️ Preencha todos os campos.")
-                    elif c_bp in usuarios_db:
-                        st.error("⚠️ Este BP já está cadastrado.")
-                    else:
-                        novo_usuario = {"nome": c_nome, "base": c_base, "senha": c_senha, "email": c_email}
-                        salvar_usuario_supabase(c_bp, novo_usuario)
-                        st.success("🎉 Cadastro realizado e salvo no Supabase com sucesso! Faça login na aba ao lado.")
+                with st.form("form_cadastro"):
+                    c_nome = st.text_input("Nome Completo")
+                    c_bp = st.text_input("BP (Código Funcional)")
+                    c_email = st.text_input("E-mail Corporativo (@latam.com)")
+                    c_base = st.selectbox("Base Operacional", BASES_LATAM)
+                    c_senha = st.text_input("Criar Senha Pessoal", type="password")
+                    submit_cad = st.form_submit_button("Concluir Cadastro")
+                    
+                    if submit_cad:
+                        if not c_nome or not c_bp or not c_email or not c_senha:
+                            st.warning("⚠️ Preencha todos os campos.")
+                        elif c_bp in usuarios_db:
+                            st.error("⚠️ Este BP já está cadastrado.")
+                        else:
+                            novo_usuario = {"nome": c_nome, "base": c_base, "senha": c_senha, "email": c_email}
+                            salvar_usuario_supabase(c_bp, novo_usuario)
+                            st.success("🎉 Cadastro realizado e salvo no Supabase com sucesso! Faça login na aba ao lado.")
 
             with tab3:
                 st.markdown("<br>", unsafe_allow_html=True)
-                r_bp = st.text_input("Informe seu BP", key="rec_bp")
-                r_email = st.text_input("Informe seu E-mail Corporativo", key="rec_email")
-                r_novasenha = st.text_input("Definir Nova Senha Pessoal", type="password", key="rec_senha")
-                
-                if st.button("Enviar E-mail de Recuperação", key="btn_rec"):
-                    if r_bp in usuarios_db and usuarios_db[r_bp]["email"] == r_email:
-                        usuarios_db[r_bp]["senha"] = r_novasenha
-                        salvar_usuario_supabase(r_bp, usuarios_db[r_bp])
-                        sucesso_envio = enviar_email_smtp(r_email, usuarios_db[r_bp]['nome'], r_novasenha)
-                        
-                        if sucesso_envio:
-                            st.success("🎉 Senha alterada e e-mail disparado com sucesso para o seu corporativo!")
+                with st.form("form_recuperacao"):
+                    r_bp = st.text_input("Informe seu BP")
+                    r_email = st.text_input("Informe seu E-mail Corporativo")
+                    r_novasenha = st.text_input("Definir Nova Senha Pessoal", type="password")
+                    submit_rec = st.form_submit_button("Enviar E-mail de Recuperação")
+                    
+                    if submit_rec:
+                        if r_bp in usuarios_db and usuarios_db[r_bp]["email"] == r_email:
+                            usuarios_db[r_bp]["senha"] = r_novasenha
+                            salvar_usuario_supabase(r_bp, usuarios_db[r_bp])
+                            sucesso_envio = enviar_email_smtp(r_email, usuarios_db[r_bp]['nome'], r_novasenha)
+                            
+                            if sucesso_envio:
+                                st.success("🎉 Senha alterada e e-mail disparado com sucesso para o seu corporativo!")
+                            else:
+                                st.warning("⚠️ Senha alterada, mas houve falha no envio do SMTP.")
                         else:
-                            st.warning("⚠️ Senha alterada, mas houve falha no envio do SMTP.")
-                    else:
-                        st.error("⚠️ BP ou e-mail não conferem com os registros.")
+                            st.error("⚠️ BP ou e-mail não conferem com os registros.")
 
 else:
     # APLICAÇÃO PRINCIPAL COM CABEÇALHO ROXO E MENU LIMPO
@@ -341,46 +347,50 @@ else:
 
     elif menu == "Solicitar Insumos":
         st.title("Nova Requisição de Materiais")
-        st.markdown("Selecione as quantidades desejadas para os itens abaixo:")
+        st.markdown("Preencha as quantidades desejadas abaixo (pressione Enter para avançar entre os campos de quantidade):")
         
         with st.container(border=True):
             quantidades = {}
-            for idx, item in enumerate(CATALOGO_ITENS):
-                col1, col2, col3, col4 = st.columns([2, 4, 1, 1])
-                with col1:
-                    st.text(item['pn'])
-                with col2:
-                    st.text(item['descricao'])
-                with col3:
-                    st.text(f"R$ {item['preco']:.2f}")
-                with col4:
-                    quantidades[item['pn']] = st.number_input("Qtd", min_value=0, value=0, key=f"qtd_{idx}", label_visibility="collapsed")
-                    
-            total_geral = sum(q * next(i['preco'] for i in CATALOGO_ITENS if i['pn'] == pn) for pn, q in quantidades.items() if q > 0)
-            st.markdown(f"### Valor Total Estimado: R$ {total_geral:,.2f}")
-            
-            if st.button("SALVAR E REGISTRAR PEDIDO", type="primary"):
-                itens_solicitados = []
-                for item in CATALOGO_ITENS:
-                    qtd = quantidades[item['pn']]
-                    if qtd > 0:
-                        itens_solicitados.append({**item, "quantidade": qtd})
+            # Usando st.form para permitir navegação natural com Enter nas caixas de texto/número
+            with st.form("form_solicitacao_insumos"):
+                for idx, item in enumerate(CATALOGO_ITENS):
+                    col1, col2, col3, col4 = st.columns([2, 4, 1, 1])
+                    with col1:
+                        st.text(item['pn'])
+                    with col2:
+                        st.text(item['descricao'])
+                    with col3:
+                        st.text(f"R$ {item['preco']:.2f}")
+                    with col4:
+                        quantidades[item['pn']] = st.number_input("Qtd", min_value=0, value=0, key=f"qtd_{idx}", label_visibility="collapsed")
                         
-                if not itens_solicitados:
-                    st.warning("⚠️ Insira ao menos uma quantidade desejada.")
-                else:
-                    novo_pedido = {
-                        "id": f"PED-{user['base'].split(' - ')[0]}-{str(datetime.now().timestamp())[-4:]}",
-                        "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                        "base": user['base'],
-                        "solicitante": user['nome'],
-                        "valorTotal": total_geral,
-                        "status": "Pendente",
-                        "itens": itens_solicitados
-                    }
-                    salvar_pedido_supabase(novo_pedido)
-                    st.success(f"🎉 Pedido {novo_pedido['id']} registado no Supabase com sucesso!")
-                    st.rerun()
+                total_geral = sum(q * next(i['preco'] for i in CATALOGO_ITENS if i['pn'] == pn) for pn, q in quantidades.items() if q > 0)
+                st.markdown(f"### Valor Total Estimado: R$ {total_geral:,.2f}")
+                
+                submit_pedido = st.form_submit_button("SALVAR E REGISTRAR PEDIDO 🚀", type="primary")
+                
+                if submit_pedido:
+                    itens_solicitados = []
+                    for item in CATALOGO_ITENS:
+                        qtd = quantidades[item['pn']]
+                        if qtd > 0:
+                            itens_solicitados.append({**item, "quantidade": qtd})
+                            
+                    if not itens_solicitados:
+                        st.warning("⚠️ Insira ao menos uma quantidade desejada.")
+                    else:
+                        novo_pedido = {
+                            "id": f"PED-{user['base'].split(' - ')[0]}-{str(datetime.now().timestamp())[-4:]}",
+                            "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                            "base": user['base'],
+                            "solicitante": user['nome'],
+                            "valorTotal": total_geral,
+                            "status": "Pendente",
+                            "itens": itens_solicitados
+                        }
+                        salvar_pedido_supabase(novo_pedido)
+                        st.success(f"🎉 Pedido {novo_pedido['id']} registado no Supabase com sucesso!")
+                        st.rerun()
 
     elif menu == "Conferência e Ajustes":
         st.title("Conferência, Ajustes e Confirmação de Recebimento")
