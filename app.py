@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import json
+import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -32,6 +34,36 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Funções de Persistência Local (JSON)
+ARQUIVO_USUARIOS = "usuarios.json"
+ARQUIVO_PEDIDOS = "pedidos.json"
+
+def carregar_usuarios():
+    if os.path.exists(ARQUIVO_USUARIOS):
+        with open(ARQUIVO_USUARIOS, "r", encoding="utf-8") as f:
+            return json.load(f)
+    else:
+        # Usuário padrão inicial
+        usuarios_padrao = {
+            "4872423": {"nome": "Isadora Sousa Lima", "base": "FOR - Fortaleza", "senha": "123", "email": "isadora@latam.com"}
+        }
+        salvar_usuarios_arquivo(usuarios_padrao)
+        return usuarios_padrao
+
+def salvar_usuarios_arquivo(usuarios):
+    with open(ARQUIVO_USUARIOS, "w", encoding="utf-8") as f:
+        json.dump(usuarios, f, ensure_ascii=False, indent=4)
+
+def carregar_pedidos():
+    if os.path.exists(ARQUIVO_PEDIDOS):
+        with open(ARQUIVO_PEDIDOS, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+def salvar_pedidos_arquivo(pedidos):
+    with open(ARQUIVO_PEDIDOS, "w", encoding="utf-8") as f:
+        json.dump(pedidos, f, ensure_ascii=False, indent=4)
+
 # Função para Disparo Real de E-mail via SMTP (Recuperação de Senha)
 def enviar_email_smtp(destinatario_email, nome_usuario, nova_senha):
     try:
@@ -55,7 +87,6 @@ def enviar_email_smtp(destinatario_email, nome_usuario, nova_senha):
         Atenciosamente,
         Equipe de Logística / WMS LATAM Cargo
         """
-        
         msg.attach(MIMEText(corpo, 'plain'))
         
         server = smtplib.SMTP(servidor_smtp, porta_smtp)
@@ -122,7 +153,6 @@ CATALOGO_ITENS = [
     {"pn": "10040975", "descricao": "TRENA 8M*25MM ACO PLAST", "unidade": "Unidade", "preco": 64.34}
 ]
 
-# Lista de Bases em Ordem Alfabética
 BASES_LATAM = [
     "AJU - Aracaju", "BEL - Belém", "BOG - Bogotá (Colômbia)", "BSB - Brasília",
     "BVB - Boa Vista", "CGB - Cuiabá", "CGH - São Paulo (Congonhas)", "CGR - Campo Grande",
@@ -135,16 +165,11 @@ BASES_LATAM = [
     "VCP - Campinas (Viracopos)", "VIX - Vitória"
 ]
 
-# Inicialização do Estado da Sessão
-if 'usuarios' not in st.session_state:
-    st.session_state.usuarios = {
-        "123456": {"nome": "Isadora Sousa Lima", "base": "FOR - Fortaleza", "senha": "123", "email": "isadora@latam.com"}
-    }
-if 'pedidos' not in st.session_state:
-    st.session_state.pedidos = []
-
 if 'usuario_logado' not in st.session_state:
     st.session_state.usuario_logado = None
+
+usuarios_db = carregar_usuarios()
+pedidos_db = carregar_pedidos()
 
 # TELA DE AUTENTICAÇÃO COM CARD ARREDONDADO
 if not st.session_state.usuario_logado:
@@ -168,8 +193,8 @@ if not st.session_state.usuario_logado:
                 senha_input = st.text_input("Senha Pessoal", type="password", key="login_senha")
                 
                 if st.button("Acessar Sistema", type="primary"):
-                    if bp_input in st.session_state.usuarios and st.session_state.usuarios[bp_input]["senha"] == senha_input:
-                        st.session_state.usuario_logado = {"bp": bp_input, **st.session_state.usuarios[bp_input]}
+                    if bp_input in usuarios_db and usuarios_db[bp_input]["senha"] == senha_input:
+                        st.session_state.usuario_logado = {"bp": bp_input, **usuarios_db[bp_input]}
                         st.rerun()
                     else:
                         st.error("⚠️ BP ou senha incorretos.")
@@ -185,10 +210,11 @@ if not st.session_state.usuario_logado:
                 if st.button("Concluir Cadastro 🚀", key="btn_cad"):
                     if not c_nome or not c_bp or not c_email or not c_senha:
                         st.warning("⚠️ Preencha todos os campos.")
-                    elif c_bp in st.session_state.usuarios:
+                    elif c_bp in usuarios_db:
                         st.error("⚠️ Este BP já está cadastrado.")
                     else:
-                        st.session_state.usuarios[c_bp] = {"nome": c_nome, "base": c_base, "senha": c_senha, "email": c_email}
+                        usuarios_db[c_bp] = {"nome": c_nome, "base": c_base, "senha": c_senha, "email": c_email}
+                        salvar_usuarios_arquivo(usuarios_db)
                         st.success("🎉 Cadastro realizado com sucesso! Faça login na aba ao lado.")
 
             with tab3:
@@ -198,15 +224,15 @@ if not st.session_state.usuario_logado:
                 r_novasenha = st.text_input("Definir Nova Senha Pessoal", type="password", key="rec_senha")
                 
                 if st.button("Enviar E-mail de Recuperação 🔒", key="btn_rec"):
-                    if r_bp in st.session_state.usuarios and st.session_state.usuarios[r_bp]["email"] == r_email:
-                        st.session_state.usuarios[r_bp]["senha"] = r_novasenha
-                        usuario_alvo = st.session_state.usuarios[r_bp]
-                        sucesso_envio = enviar_email_smtp(r_email, usuario_alvo['nome'], r_novasenha)
+                    if r_bp in usuarios_db and usuarios_db[r_bp]["email"] == r_email:
+                        usuarios_db[r_bp]["senha"] = r_novasenha
+                        salvar_usuarios_arquivo(usuarios_db)
+                        sucesso_envio = enviar_email_smtp(r_email, usuarios_db[r_bp]['nome'], r_novasenha)
                         
                         if sucesso_envio:
                             st.success("🎉 Senha alterada e e-mail disparado com sucesso para o seu corporativo!")
                         else:
-                            st.warning("⚠️ Senha alterada, mas houve uma falha no envio do SMTP. Verifique os Secrets.")
+                            st.warning("⚠️ Senha alterada, mas houve falha no envio do SMTP.")
                     else:
                         st.error("⚠️ BP ou e-mail não conferem com os registros.")
 
@@ -233,8 +259,7 @@ else:
         st.session_state.usuario_logado = None
         st.rerun()
 
-    # FILTRAR PEDIDOS DA BASE DO USUÁRIO
-    pedidos_base = [p for p in st.session_state.pedidos if p['base'] == user['base']]
+    pedidos_base = [p for p in pedidos_db if p['base'] == user['base']]
 
     if menu == "📊 Painel de Gestão":
         st.title(f"Painel WMS - Base {user['base']}")
@@ -302,8 +327,10 @@ else:
                         "status": "Pendente",
                         "itens": itens_solicitados
                     }
-                    st.session_state.pedidos.append(novo_pedido)
+                    pedidos_db.append(novo_pedido)
+                    salvar_pedidos_arquivo(pedidos_db)
                     st.success(f"🎉 Pedido {novo_pedido['id']} registado com sucesso!")
+                    st.rerun()
 
     elif menu == "✅ Conferência e Ajustes":
         st.title("✅ Conferência, Ajustes e Confirmação de Recebimento")
@@ -328,7 +355,8 @@ else:
                         novos_itens = edited_df.to_dict(orient="records")
                         pedido['itens'] = novos_itens
                         pedido['status'] = "Recebido"
-                        st.success(f"🎉 Pedido {pedido['id']} confirmado e atualizado com sucesso!")
+                        salvar_pedidos_arquivo(pedidos_db)
+                        st.success(f"🎉 Pedido {pedido['id']} confirmado com sucesso!")
                         st.rerun()
                         
                 with col2:
@@ -349,8 +377,8 @@ else:
         st.markdown("Consolidado de todas as solicitações e conferências da rede LATAM Cargo.")
         
         with st.container(border=True):
-            if st.session_state.pedidos:
-                df_geral = pd.DataFrame(st.session_state.pedidos)[['id', 'data', 'base', 'solicitante', 'valorTotal', 'status']]
+            if pedidos_db:
+                df_geral = pd.DataFrame(pedidos_db)[['id', 'data', 'base', 'solicitante', 'valorTotal', 'status']]
                 df_geral.columns = ["ID", "DATA", "BASE", "SOLICITANTE", "VALOR TOTAL (R$)", "STATUS"]
                 st.dataframe(df_geral, use_container_width=True)
             else:
