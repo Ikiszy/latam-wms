@@ -1,7 +1,9 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Configuração da Página
 st.set_page_config(
@@ -19,6 +21,45 @@ st.markdown("""
         .card-metric { background-color: #1E293B; padding: 20px; border-radius: 12px; border-left: 5px solid #E2001A; }
     </style>
 """, unsafe_allow_html=True)
+
+# Função para Disparo Real de E-mail via SMTP (Recuperação de Senha)
+def enviar_email_smtp(destinatario_email, nome_usuario, nova_senha):
+    try:
+        # Pega as credenciais de forma segura do st.secrets configurado na nuvem
+        servidor_smtp = "smtp.gmail.com"
+        porta_smtp = 587
+        remetente_email = st.secrets["EMAIL_USUARIO"]
+        senha_remetente = st.secrets["EMAIL_SENHA"]
+        
+        msg = MIMEMultipart()
+        msg['From'] = remetente_email
+        msg['To'] = destinatario_email
+        msg['Subject'] = "🔒 Recuperação de Senha - LATAM WMS Insumos"
+        
+        corpo = f"""
+        Olá, {nome_usuario},
+        
+        Recebemos uma solicitação de redefinição de senha para o seu acesso ao WMS de Insumos da LATAM Cargo.
+        
+        Sua nova senha temporária cadastrada é: {nova_senha}
+        
+        Recomendamos que faça o login com ela e altere ou mantenha sua preferência de acesso com segurança.
+        
+        Atenciosamente,
+        Equipe de Logística / WMS LATAM Cargo
+        """
+        
+        msg.attach(MIMEText(corpo, 'plain'))
+        
+        server = smtplib.SMTP(servidor_smtp, porta_smtp)
+        server.starttls()
+        server.login(remetente_email, senha_remetente)
+        server.sendmail(remetente_email, destinatario_email, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"Erro ao disparar e-mail SMTP: {e}")
+        return False
 
 # Catálogo Oficial de Insumos LATAM Cargo
 CATALOGO_ITENS = [
@@ -135,17 +176,26 @@ if not st.session_state.usuario_logado:
                 st.success("🎉 Cadastro realizado com sucesso! Faça login na aba ao lado.")
 
     with tab3:
-        st.subheader("Recuperação de Senha")
-        r_bp = st.text_input("Informe seu BP")
-        r_email = st.text_input("Informe seu E-mail Corporativo")
-        r_novasenha = st.text_input("Nova Senha Pessoal", type="password")
+        st.subheader("Recuperação de Senha por E-mail")
+        r_bp = st.text_input("Informe seu BP", key="rec_bp")
+        r_email = st.text_input("Informe seu E-mail Corporativo", key="rec_email")
+        r_novasenha = st.text_input("Definir Nova Senha Pessoal", type="password", key="rec_senha")
         
-        if st.button("Redefinir Senha 🔒"):
+        if st.button("Enviar E-mail de Recuperação 🔒"):
             if r_bp in st.session_state.usuarios and st.session_state.usuarios[r_bp]["email"] == r_email:
+                # Atualiza a senha no sistema
                 st.session_state.usuarios[r_bp]["senha"] = r_novasenha
-                st.success("🎉 Senha redefinida com sucesso! Faça login.")
+                
+                # Dispara o e-mail real via SMTP
+                usuario_alvo = st.session_state.usuarios[r_bp]
+                sucesso_envio = enviar_email_smtp(r_email, usuario_alvo['nome'], r_novasenha)
+                
+                if sucesso_envio:
+                    st.success("🎉 Senha alterada e e-mail de confirmação disparado com sucesso para o seu corporativo!")
+                else:
+                    st.warning("⚠️ Senha alterada com sucesso, mas houve uma falha no envio do e-mail SMTP. Verifique as credenciais nos Secrets.")
             else:
-                st.error("⚠️ BP ou e-mail não conferem com os registros.")
+                st.error("⚠️ BP ou e-mail não conferem com os registros do sistema.")
 
 else:
     # APLICAÇÃO PRINCIPAL (Pós-Login)
