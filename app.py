@@ -51,7 +51,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Catálogo Oficial de Insumos LATAM Cargo
+# Catálogo Oficial de Insumos LATAM Cargo (Calculadora de Insumos)
 CATALOGO_ITENS = [
     {"pn": "100000000200041651", "descricao": "MANTA PLASTICA ABSORVENTE 1800 X 2400MM", "unidade": "Unidade", "preco": 3890.00},
     {"pn": "100000000200041665", "descricao": "MANTA PLASTICA ABSORVENTE 1400 X 2400MM", "unidade": "Unidade", "preco": 3400.00},
@@ -178,7 +178,7 @@ if menu == "Painel de Gestão":
 
 elif menu == "Solicitar Insumos":
     st.title("Nova Requisição de Materiais")
-    st.markdown("Selecione sua base operacional e preencha as quantidades desejadas abaixo:")
+    st.markdown("Preencha a calculadora de insumos desejados. Ao registrar, o sistema gerará a **Planilha de Pedido Oficial** para download:")
     
     base_selecionada = st.selectbox("Base Operacional Solicitante", BASES_LATAM)
     
@@ -199,7 +199,7 @@ elif menu == "Solicitar Insumos":
             total_geral = sum(q * next(i['preco'] for i in CATALOGO_ITENS if i['pn'] == pn) for pn, q in quantidades.items() if q > 0)
             st.markdown(f"### Valor Total Estimado: R$ {total_geral:,.2f}")
             
-            submit_pedido = st.form_submit_button("SALVAR E REGISTRAR PEDIDO 🚀", type="primary")
+            submit_pedido = st.form_submit_button("REGISTRAR E GERAR PLANILHA DE PEDIDO 🚀", type="primary")
             
             if submit_pedido:
                 itens_solicitados = []
@@ -220,12 +220,32 @@ elif menu == "Solicitar Insumos":
                         "itens": itens_solicitados
                     }
                     st.session_state.pedidos_sessao.append(novo_pedido)
+                    st.session_state.ultimo_pedido_criado = novo_pedido
                     st.success(f"🎉 Pedido {novo_pedido['id']} registado com sucesso!")
-                    st.rerun()
+
+    # Se um pedido acabou de ser criado, exibe o botão dedicado para baixar a planilha do pedido
+    if 'ultimo_pedido_criado' in st.session_state:
+        p_recente = st.session_state.ultimo_pedido_criado
+        st.markdown("---")
+        st.markdown("### 📥 Baixar Planilha de Solicitação (Pedido Oficial)")
+        
+        csv_pedido_linhas = ["Part Number (PN);Descricao;Unidade;Preco Unitario (R$);Quantidade Solicitada;Valor Total (R$)"]
+        for it in p_recente['itens']:
+            subtotal = it['quantidade'] * it['preco']
+            csv_pedido_linhas.append(f"{it['pn']};{it['descricao']};{it['unidade']};{it['preco']};{it['quantidade']};{subtotal:.2f}")
+        csv_pedido_data = "\n".join(csv_pedido_linhas)
+        
+        st.download_button(
+            label="📄 Baixar Planilha (.csv) do Pedido",
+            data=csv_pedido_data,
+            file_name=f"Planilha_Pedido_{p_recente['base'].split(' - ')[0]}_{p_recente['id']}.csv",
+            mime="text/csv",
+            type="primary"
+        )
 
 elif menu == "Conferência e Ajustes":
     st.title("Conferência, Ajustes e Confirmação de Recebimento")
-    st.markdown("Selecione um pedido para conferir itens, ajustar quantidades e exportar a planilha.")
+    st.markdown("Selecione um pedido para conferir o que chegou fisicamente, ajustar e exportar a planilha de recebimento.")
     
     ids_pedidos = [p['id'] for p in pedidos_db]
     if not ids_pedidos:
@@ -255,7 +275,7 @@ elif menu == "Conferência e Ajustes":
                 csv_data = "\n".join(csv_linhas)
                 
                 st.download_button(
-                    label="Baixar Planilha Insumos (.csv)",
+                    label="Baixar Planilha de Recebimento (.csv)",
                     data=csv_data,
                     file_name=f"Insumos_Conferidos_{pedido['id']}.csv",
                     mime="text/csv"
@@ -278,7 +298,6 @@ elif menu == "Sugestões e Erros":
     st.markdown("Envie uma mensagem direta para a equipe de desenvolvimento.")
     
     with st.container(border=True):
-        # Substituindo por componentes nativos do Streamlit para evitar código HTML visível
         with st.form("form_feedback"):
             tipo_msg = st.selectbox("TIPO DE MENSAGEM", ["💡 Sugestão de Melhoria", "🛠️ Reportar Erro / Bug", "📌 Outro Assunto"])
             detalhes_msg = st.text_area("DETALHES", placeholder="Descreva aqui sua sugestão ou o erro encontrado...", height=150)
