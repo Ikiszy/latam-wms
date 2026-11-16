@@ -1,10 +1,6 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from supabase import create_client, Client
 
 # Configuração da Página
 st.set_page_config(
@@ -14,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilização CSS refinada idêntica ao design corporativo desejado
+# Estilização CSS refinada (design corporativo com gradiente roxo)
 st.markdown("""
     <style>
         .main { background-color: #121824; color: #F8FAFC; }
@@ -54,89 +50,6 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
-
-# Conexão com o Supabase via Secrets
-@st.cache_resource
-def init_supabase():
-    url = st.secrets["supabase"]["url"]
-    key = st.secrets["supabase"]["key"]
-    return create_client(url, key)
-
-supabase: Client = init_supabase()
-
-def buscar_usuarios():
-    try:
-        response = supabase.table("usuarios").select("*").execute()
-        usuarios_dict = {u["bp"]: u for u in response.data}
-        if not usuarios_dict:
-            return {
-                "4872423": {"nome": "Isadora Sousa Lima", "base": "FOR - Fortaleza", "senha": "123", "email": "isadora@latam.com"}
-            }
-        return usuarios_dict
-    except Exception:
-        return {
-            "4872423": {"nome": "Isadora Sousa Lima", "base": "FOR - Fortaleza", "senha": "123", "email": "isadora@latam.com"}
-        }
-
-def salvar_usuario_supabase(bp, dados):
-    try:
-        supabase.table("usuarios").upsert({"bp": bp, **dados}).execute()
-    except Exception as e:
-        st.error(f"Erro ao salvar usuário no Supabase: {e}")
-
-def buscar_pedidos():
-    try:
-        response = supabase.table("pedidos").select("*").execute()
-        return response.data
-    except Exception:
-        return []
-
-def salvar_pedido_supabase(pedido):
-    try:
-        supabase.table("pedidos").insert(pedido).execute()
-    except Exception as e:
-        st.error(f"Erro ao salvar pedido no Supabase: {e}")
-
-def atualizar_pedido_supabase(pedido_id, novos_itens, novo_status):
-    try:
-        supabase.table("pedidos").update({"itens": novos_itens, "status": novo_status}).eq("id", pedido_id).execute()
-    except Exception as e:
-        st.error(f"Erro ao atualizar pedido: {e}")
-
-# Função para Disparo Real de E-mail via SMTP (Recuperação de Senha)
-def enviar_email_smtp(destinatario_email, nome_usuario, nova_senha):
-    try:
-        servidor_smtp = "smtp.gmail.com"
-        porta_smtp = 587
-        remetente_email = st.secrets["EMAIL_USUARIO"]
-        senha_remetente = st.secrets["EMAIL_SENHA"]
-        
-        msg = MIMEMultipart()
-        msg['From'] = remetente_email
-        msg['To'] = destinatario_email
-        msg['Subject'] = "🔒 Recuperação de Senha - LATAM WMS Insumos"
-        
-        corpo = f"""
-        Olá, {nome_usuario},
-        
-        Recebemos uma solicitação de redefinição de senha para o seu acesso ao WMS de Insumos da LATAM Cargo.
-        
-        Sua nova senha temporária cadastrada é: {nova_senha}
-        
-        Atenciosamente,
-        Equipe de Logística / WMS LATAM Cargo
-        """
-        msg.attach(MIMEText(corpo, 'plain'))
-        
-        server = smtplib.SMTP(servidor_smtp, porta_smtp)
-        server.starttls()
-        server.login(remetente_email, senha_remetente)
-        server.sendmail(remetente_email, destinatario_email, msg.as_string())
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"Erro ao disparar e-mail SMTP: {e}")
-        return False
 
 # Catálogo Oficial de Insumos LATAM Cargo
 CATALOGO_ITENS = [
@@ -204,269 +117,185 @@ BASES_LATAM = [
     "VCP - Campinas (Viracopos)", "VIX - Vitória"
 ]
 
-if 'usuario_logado' not in st.session_state:
-    st.session_state.usuario_logado = None
+# Inicializa histórico na sessão local
+if 'pedidos_sessao' not in st.session_state:
+    st.session_state.pedidos_sessao = []
 
-usuarios_db = buscar_usuarios()
-pedidos_db = buscar_pedidos()
+# MENU LATERAL LIMPO
+st.sidebar.markdown("""
+    <div style="padding: 10px 0; border-bottom: 1px solid #334155; margin-bottom: 20px;">
+        <h2 style="font-size: 20px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h2>
+        <p style="font-size: 12px; color: #94A3B8; margin-top: 4px;">WMS & Logística</p>
+    </div>
+""", unsafe_allow_html=True)
 
-# TELA DE AUTENTICAÇÃO COM SUPORTE A ENTER (st.form)
-if not st.session_state.usuario_logado:
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1.2, 1])
+menu = st.sidebar.radio("Menu de Navegação", [
+    "Painel de Gestão", 
+    "Solicitar Insumos", 
+    "Conferência e Ajustes", 
+    "Histórico Geral", 
+    "Sugestões e Erros"
+], label_visibility="collapsed")
+
+# Cabeçalho Principal Estilizado com Gradiente Roxo Corporativo
+st.markdown("""
+    <div style="background: linear-gradient(135deg, #2A0052 0%, #1A0033 100%); padding: 25px 30px; border-radius: 16px; border: 1px solid #4C1D95; box-shadow: 0 8px 20px rgba(0,0,0,0.4); display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <div>
+            <h1 style="color: #FFFFFF; font-size: 28px; font-weight: 800; margin: 0;">LATAM Cargo WMS</h1>
+            <p style="color: #C4B5FD; font-size: 14px; margin: 5px 0 0 0;">Gestão integrada e ágil de insumos operacionais</p>
+        </div>
+        <div style="text-align: right;">
+            <span style="color: #FFFFFF; font-size: 16px; font-weight: 700; display: block;">Modo Direto</span>
+            <span style="color: #A78BFA; font-size: 13px;">Sem Autenticação</span>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
+
+pedidos_db = st.session_state.pedidos_sessao
+
+if menu == "Painel de Gestão":
+    col1, col2 = st.columns(2)
+    pendentes_count = len([p for p in pedidos_db if p['status'] == "Pendente"])
+    recebidos_count = len([p for p in pedidos_db if p['status'] == "Recebido"])
     
+    with col1:
+        with st.container(border=True):
+            st.markdown("<span style='font-size: 12px; font-weight: 700; color: #94A3B8; letter-spacing: 1px;'>PEDIDOS PENDENTES</span>", unsafe_allow_html=True)
+            st.markdown(f"<h3 style='font-size: 38px; font-weight: 800; color: #FFFFFF; margin-top: 5px;'>{pendentes_count}</h3>", unsafe_allow_html=True)
+        
     with col2:
         with st.container(border=True):
-            st.markdown("""
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h1 style="font-size: 28px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h1>
-                    <p style="font-size: 13px; color: #94A3B8; margin-top: 6px;">WMS e Logística de Insumos - Acesso Corporativo</p>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            tab1, tab2, tab3 = st.tabs(["Entrar", "Cadastrar BP", "Esqueci a Senha"])
-            
-            with tab1:
-                st.markdown("<br>", unsafe_allow_html=True)
-                # st.form permite que ao preencher a senha e apertar Enter, o login seja acionado automaticamente
-                with st.form("form_login"):
-                    bp_input = st.text_input("BP (Código Funcional)")
-                    senha_input = st.text_input("Senha Pessoal", type="password")
-                    submit_login = st.form_submit_button("Acessar Sistema", type="primary")
-                    
-                    if submit_login:
-                        if bp_input in usuarios_db and usuarios_db[bp_input]["senha"] == senha_input:
-                            st.session_state.usuario_logado = {"bp": bp_input, **usuarios_db[bp_input]}
-                            st.rerun()
-                        else:
-                            st.error("⚠️ BP ou senha incorretos.")
-
-            with tab2:
-                st.markdown("<br>", unsafe_allow_html=True)
-                with st.form("form_cadastro"):
-                    c_nome = st.text_input("Nome Completo")
-                    c_bp = st.text_input("BP (Código Funcional)")
-                    c_email = st.text_input("E-mail Corporativo (@latam.com)")
-                    c_base = st.selectbox("Base Operacional", BASES_LATAM)
-                    c_senha = st.text_input("Criar Senha Pessoal", type="password")
-                    submit_cad = st.form_submit_button("Concluir Cadastro")
-                    
-                    if submit_cad:
-                        if not c_nome or not c_bp or not c_email or not c_senha:
-                            st.warning("⚠️ Preencha todos os campos.")
-                        elif c_bp in usuarios_db:
-                            st.error("⚠️ Este BP já está cadastrado.")
-                        else:
-                            novo_usuario = {"nome": c_nome, "base": c_base, "senha": c_senha, "email": c_email}
-                            salvar_usuario_supabase(c_bp, novo_usuario)
-                            st.success("🎉 Cadastro realizado e salvo no Supabase com sucesso! Faça login na aba ao lado.")
-
-            with tab3:
-                st.markdown("<br>", unsafe_allow_html=True)
-                with st.form("form_recuperacao"):
-                    r_bp = st.text_input("Informe seu BP")
-                    r_email = st.text_input("Informe seu E-mail Corporativo")
-                    r_novasenha = st.text_input("Definir Nova Senha Pessoal", type="password")
-                    submit_rec = st.form_submit_button("Enviar E-mail de Recuperação")
-                    
-                    if submit_rec:
-                        if r_bp in usuarios_db and usuarios_db[r_bp]["email"] == r_email:
-                            usuarios_db[r_bp]["senha"] = r_novasenha
-                            salvar_usuario_supabase(r_bp, usuarios_db[r_bp])
-                            sucesso_envio = enviar_email_smtp(r_email, usuarios_db[r_bp]['nome'], r_novasenha)
-                            
-                            if sucesso_envio:
-                                st.success("🎉 Senha alterada e e-mail disparado com sucesso para o seu corporativo!")
-                            else:
-                                st.warning("⚠️ Senha alterada, mas houve falha no envio do SMTP.")
-                        else:
-                            st.error("⚠️ BP ou e-mail não conferem com os registros.")
-
-else:
-    # APLICAÇÃO PRINCIPAL COM CABEÇALHO ROXO E MENU LIMPO
-    user = st.session_state.usuario_logado
-    
-    st.sidebar.markdown("""
-        <div style="padding: 10px 0; border-bottom: 1px solid #334155; margin-bottom: 20px;">
-            <h2 style="font-size: 20px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h2>
-            <p style="font-size: 12px; color: #94A3B8; margin-top: 4px;">WMS & Logística</p>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    menu = st.sidebar.radio("Menu de Navegação", [
-        "Painel de Gestão", 
-        "Solicitar Insumos", 
-        "Conferência e Ajustes", 
-        "Histórico Geral", 
-        "Sugestões e Erros"
-    ], label_visibility="collapsed")
-    
-    st.sidebar.markdown("---")
-    if st.sidebar.button("Sair do Sistema", type="secondary"):
-        st.session_state.usuario_logado = None
-        st.rerun()
-
-    pedidos_base = [p for p in pedidos_db if p['base'] == user['base']]
-
-    if menu == "Painel de Gestão":
-        st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #2A0052 0%, #1A0033 100%); padding: 25px 30px; border-radius: 16px; border: 1px solid #4C1D95; box-shadow: 0 8px 20px rgba(0,0,0,0.4); display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                <div>
-                    <h1 style="color: #FFFFFF; font-size: 28px; font-weight: 800; margin: 0;">Painel WMS - Base {user['base'].split(' - ')[0]}</h1>
-                    <p style="color: #C4B5FD; font-size: 14px; margin: 5px 0 0 0;">Visão geral de operações e solicitações de insumos</p>
-                </div>
-                <div style="text-align: right;">
-                    <span style="color: #FFFFFF; font-size: 16px; font-weight: 700; display: block;">{user['nome']}</span>
-                    <span style="color: #A78BFA; font-size: 13px;">Base: {user['base']} (BP: {user['bp']})</span>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+            st.markdown("<span style='font-size: 12px; font-weight: 700; color: #38A169; letter-spacing: 1px;'>PEDIDOS APROVADOS / RECEBIDOS</span>", unsafe_allow_html=True)
+            st.markdown(f"<h3 style='font-size: 38px; font-weight: 800; color: #FFFFFF; margin-top: 5px;'>{recebidos_count}</h3>", unsafe_allow_html=True)
         
-        col1, col2 = st.columns(2)
-        pendentes_count = len([p for p in pedidos_base if p['status'] == "Pendente"])
-        recebidos_count = len([p for p in pedidos_base if p['status'] == "Recebido"])
-        
-        with col1:
-            with st.container(border=True):
-                st.markdown("<span style='font-size: 12px; font-weight: 700; color: #94A3B8; letter-spacing: 1px;'>PEDIDOS PENDENTES</span>", unsafe_allow_html=True)
-                st.markdown(f"<h3 style='font-size: 38px; font-weight: 800; color: #FFFFFF; margin-top: 5px;'>{pendentes_count}</h3>", unsafe_allow_html=True)
-            
-        with col2:
-            with st.container(border=True):
-                st.markdown("<span style='font-size: 12px; font-weight: 700; color: #38A169; letter-spacing: 1px;'>PEDIDOS APROVADOS / RECEBIDOS</span>", unsafe_allow_html=True)
-                st.markdown(f"<h3 style='font-size: 38px; font-weight: 800; color: #FFFFFF; margin-top: 5px;'>{recebidos_count}</h3>", unsafe_allow_html=True)
-            
-        st.markdown("### Histórico de Solicitações da Base")
-        with st.container(border=True):
-            if pedidos_base:
-                df_base = pd.DataFrame(pedidos_base)[['id', 'data', 'solicitante', 'valorTotal', 'status']]
-                df_base.columns = ["ID PEDIDO", "DATA", "SOLICITANTE", "VALOR TOTAL (R$)", "STATUS"]
-                st.dataframe(df_base, use_container_width=True)
-            else:
-                st.info("Nenhum pedido registado para esta base ainda.")
-
-    elif menu == "Solicitar Insumos":
-        st.title("Nova Requisição de Materiais")
-        st.markdown("Preencha as quantidades desejadas abaixo (pressione Enter para avançar entre os campos de quantidade):")
-        
-        with st.container(border=True):
-            quantidades = {}
-            # Usando st.form para permitir navegação natural com Enter nas caixas de texto/número
-            with st.form("form_solicitacao_insumos"):
-                for idx, item in enumerate(CATALOGO_ITENS):
-                    col1, col2, col3, col4 = st.columns([2, 4, 1, 1])
-                    with col1:
-                        st.text(item['pn'])
-                    with col2:
-                        st.text(item['descricao'])
-                    with col3:
-                        st.text(f"R$ {item['preco']:.2f}")
-                    with col4:
-                        quantidades[item['pn']] = st.number_input("Qtd", min_value=0, value=0, key=f"qtd_{idx}", label_visibility="collapsed")
-                        
-                total_geral = sum(q * next(i['preco'] for i in CATALOGO_ITENS if i['pn'] == pn) for pn, q in quantidades.items() if q > 0)
-                st.markdown(f"### Valor Total Estimado: R$ {total_geral:,.2f}")
-                
-                submit_pedido = st.form_submit_button("SALVAR E REGISTRAR PEDIDO 🚀", type="primary")
-                
-                if submit_pedido:
-                    itens_solicitados = []
-                    for item in CATALOGO_ITENS:
-                        qtd = quantidades[item['pn']]
-                        if qtd > 0:
-                            itens_solicitados.append({**item, "quantidade": qtd})
-                            
-                    if not itens_solicitados:
-                        st.warning("⚠️ Insira ao menos uma quantidade desejada.")
-                    else:
-                        novo_pedido = {
-                            "id": f"PED-{user['base'].split(' - ')[0]}-{str(datetime.now().timestamp())[-4:]}",
-                            "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                            "base": user['base'],
-                            "solicitante": user['nome'],
-                            "valorTotal": total_geral,
-                            "status": "Pendente",
-                            "itens": itens_solicitados
-                        }
-                        salvar_pedido_supabase(novo_pedido)
-                        st.success(f"🎉 Pedido {novo_pedido['id']} registado no Supabase com sucesso!")
-                        st.rerun()
-
-    elif menu == "Conferência e Ajustes":
-        st.title("Conferência, Ajustes e Confirmação de Recebimento")
-        st.markdown("Ajuste quantidades ou nomes divergentes conforme o que chegou fisicamente na base, confirme e baixe o CSV final.")
-        
-        ids_pedidos = [p['id'] for p in pedidos_base]
-        if not ids_pedidos:
-            st.info("Nenhum pedido disponível para conferência nesta base.")
+    st.markdown("### Histórico de Solicitações")
+    with st.container(border=True):
+        if pedidos_db:
+            df_base = pd.DataFrame(pedidos_db)[['id', 'data', 'base', 'valorTotal', 'status']]
+            df_base.columns = ["ID PEDIDO", "DATA", "BASE", "VALOR TOTAL (R$)", "STATUS"]
+            st.dataframe(df_base, use_container_width=True)
         else:
-            with st.container(border=True):
-                pedido_selecionado_id = st.selectbox("Selecione o Pedido para Conferência", ids_pedidos)
-                pedido = next(p for p in pedidos_base if p['id'] == pedido_selecionado_id)
-                
-                st.markdown(f"**Status Atual:** `{pedido['status']}`")
-                
-                df_itens = pd.DataFrame(pedido['itens'])
-                edited_df = st.data_editor(df_itens, num_rows="dynamic", use_container_width=True)
-                
-                col1, col2 = st.columns(2)
+            st.info("Nenhum pedido registado nesta sessão ainda.")
+
+elif menu == "Solicitar Insumos":
+    st.title("Nova Requisição de Materiais")
+    st.markdown("Selecione sua base operacional e preencha as quantidades desejadas abaixo:")
+    
+    base_selecionada = st.selectbox("Base Operacional Solicitante", BASES_LATAM)
+    
+    with st.container(border=True):
+        quantidades = {}
+        with st.form("form_solicitacao_insumos"):
+            for idx, item in enumerate(CATALOGO_ITENS):
+                col1, col2, col3, col4 = st.columns([2, 4, 1, 1])
                 with col1:
-                    if st.button("Salvar Ajustes & Confirmar Recebimento", type="primary"):
-                        novos_itens = edited_df.to_dict(orient="records")
-                        atualizar_pedido_supabase(pedido['id'], novos_itens, "Recebido")
-                        st.success(f"🎉 Pedido {pedido['id']} confirmado no Supabase!")
-                        st.rerun()
-                        
+                    st.text(item['pn'])
                 with col2:
-                    csv_linhas = ["Item;Quantidade"]
-                    for i in pedido['itens']:
-                        csv_linhas.append(f"{i['pn']} - {i['descricao']};{i['quantidade']}")
-                    csv_data = "\n".join(csv_linhas)
+                    st.text(item['descricao'])
+                with col3:
+                    st.text(f"R$ {item['preco']:.2f}")
+                with col4:
+                    quantidades[item['pn']] = st.number_input("Qtd", min_value=0, value=0, key=f"qtd_{idx}", label_visibility="collapsed")
                     
-                    st.download_button(
-                        label="Baixar Planilha Insumos (.csv) LATAM",
-                        data=csv_data,
-                        file_name=f"Insumos_Conferidos_{pedido['base'].split(' - ')[0]}_{pedido['id']}.csv",
-                        mime="text/csv"
-                    )
+            total_geral = sum(q * next(i['preco'] for i in CATALOGO_ITENS if i['pn'] == pn) for pn, q in quantidades.items() if q > 0)
+            st.markdown(f"### Valor Total Estimado: R$ {total_geral:,.2f}")
+            
+            submit_pedido = st.form_submit_button("SALVAR E REGISTRAR PEDIDO 🚀", type="primary")
+            
+            if submit_pedido:
+                itens_solicitados = []
+                for item in CATALOGO_ITENS:
+                    qtd = quantidades[item['pn']]
+                    if qtd > 0:
+                        itens_solicitados.append({**item, "quantidade": qtd})
+                        
+                if not itens_solicitados:
+                    st.warning("⚠️ Insira ao menos uma quantidade desejada.")
+                else:
+                    novo_pedido = {
+                        "id": f"PED-{base_selecionada.split(' - ')[0]}-{str(datetime.now().timestamp())[-4:]}",
+                        "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "base": base_selecionada,
+                        "valorTotal": total_geral,
+                        "status": "Pendente",
+                        "itens": itens_solicitados
+                    }
+                    st.session_state.pedidos_sessao.append(novo_pedido)
+                    st.success(f"🎉 Pedido {novo_pedido['id']} registado com sucesso!")
+                    st.rerun()
 
-    elif menu == "Histórico Geral":
-        st.title("Auditoria e Histórico Geral")
-        st.markdown("Consolidado de todas as solicitações e conferências da rede LATAM Cargo.")
-        
+elif menu == "Conferência e Ajustes":
+    st.title("Conferência, Ajustes e Confirmação de Recebimento")
+    st.markdown("Selecione um pedido para conferir itens, ajustar quantidades e exportar a planilha.")
+    
+    ids_pedidos = [p['id'] for p in pedidos_db]
+    if not ids_pedidos:
+        st.info("Nenhum pedido disponível para conferência.")
+    else:
         with st.container(border=True):
-            if pedidos_db:
-                df_geral = pd.DataFrame(pedidos_db)[['id', 'data', 'base', 'solicitante', 'valorTotal', 'status']]
-                df_geral.columns = ["ID", "DATA", "BASE", "SOLICITANTE", "VALOR TOTAL (R$)", "STATUS"]
-                st.dataframe(df_geral, use_container_width=True)
-            else:
-                st.info("Nenhum pedido registado no sistema global.")
+            pedido_selecionado_id = st.selectbox("Selecione o Pedido", ids_pedidos)
+            pedido = next(p for p in pedidos_db if p['id'] == pedido_selecionado_id)
+            
+            st.markdown(f"**Base:** `{pedido['base']}` | **Status Atual:** `{pedido['status']}`")
+            
+            df_itens = pd.DataFrame(pedido['itens'])
+            edited_df = st.data_editor(df_itens, num_rows="dynamic", use_container_width=True)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Confirmar Recebimento", type="primary"):
+                    pedido['itens'] = edited_df.to_dict(orient="records")
+                    pedido['status'] = "Recebido"
+                    st.success(f"🎉 Pedido {pedido['id']} marcado como Recebido!")
+                    st.rerun()
+                    
+            with col2:
+                csv_linhas = ["Item;Quantidade"]
+                for i in pedido['itens']:
+                    csv_linhas.append(f"{i['pn']} - {i['descricao']};{i['quantidade']}")
+                csv_data = "\n".join(csv_linhas)
+                
+                st.download_button(
+                    label="Baixar Planilha Insumos (.csv)",
+                    data=csv_data,
+                    file_name=f"Insumos_Conferidos_{pedido['id']}.csv",
+                    mime="text/csv"
+                )
 
-    elif menu == "Sugestões e Erros":
-        st.title("Central de Feedback, Sugestões e Erros")
-        st.markdown("Encontrou algum problema no sistema ou tem uma ideia de melhoria? Envie uma mensagem direta para a equipe de desenvolvimento.")
-        
-        with st.container(border=True):
-            formspree_html = f"""
-            <form action="https://formspree.io/f/mrenybwd" method="POST" style="color: #F8FAFC;">
-                <input type="hidden" name="Colaborador" value="{user['nome']} (BP: {user['bp']})">
-                <input type="hidden" name="Base" value="{user['base']}">
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #94A3B8;">TIPO DE MENSAGEM</label>
-                    <select name="Tipo" style="width: 100%; padding: 12px; border-radius: 8px; background: #0F172A; color: #FFF; border: 1px solid #334155;">
-                        <option value="Sugestao">💡 Sugestão de Melhoria</option>
-                        <option value="Erro">🛠️ Reportar Erro / Bug</option>
-                        <option value="Outro">📌 Outro Assunto</option>
-                    </select>
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #94A3B8;">DETALHES DA MENSAGEM</label>
-                    <textarea name="Mensagem" rows="5" placeholder="Descreva aqui sua sugestão ou o erro encontrado..." style="width: 100%; padding: 12px; border-radius: 8px; background: #0F172A; color: #FFF; border: 1px solid #334155;" required></textarea>
-                </div>
-                
-                <button type="submit" style="background: #E2001A; color: white; padding: 14px 20px; border: none; border-radius: 8px; font-weight: 700; width: 100%; cursor: pointer;">Enviar Mensagem 🚀</button>
-            </form>
-            """
-            st.markdown(formspree_html, unsafe_allow_html=True)
+elif menu == "Histórico Geral":
+    st.title("Auditoria e Histórico Geral")
+    st.markdown("Consolidado de todas as solicitações registradas.")
+    
+    with st.container(border=True):
+        if pedidos_db:
+            df_geral = pd.DataFrame(pedidos_db)[['id', 'data', 'base', 'valorTotal', 'status']]
+            df_geral.columns = ["ID", "DATA", "BASE", "VALOR TOTAL (R$)", "STATUS"]
+            st.dataframe(df_geral, use_container_width=True)
+        else:
+            st.info("Nenhum pedido registado no sistema.")
+
+elif menu == "Sugestões e Erros":
+    st.title("Central de Feedback e Sugestões")
+    st.markdown("Envie uma mensagem direta para a equipe de desenvolvimento.")
+    
+    with st.container(border=True):
+        formspree_html = """
+        <form action="https://formspree.io/f/mrenybwd" method="POST" style="color: #F8FAFC;">
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #94A3B8;">TIPO DE MENSAGEM</label>
+                <select name="Tipo" style="width: 100%; padding: 12px; border-radius: 8px; background: #0F172A; color: #FFF; border: 1px solid #334155;">
+                    <option value="Sugestao">💡 Sugestão de Melhoria</option>
+                    <option value="Erro">🛠️ Reportar Erro / Bug</option>
+                    <option value="Outro">📌 Outro Assunto</option>
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #94A3B8;">DETALHES</label>
+                <textarea name="Mensagem" rows="5" placeholder="Descreva aqui sua sugestão ou o erro encontrado..." style="width: 100%; padding: 12px; border-radius: 8px; background: #0F172A; color: #FFF; border: 1px solid #334155;" required></textarea>
+            </div>
+            
+            <button type="submit" style="background: #E2001A; color: white; padding: 14px 20px; border: none; border-radius: 8px; font-weight: 700; width: 100%; cursor: pointer;">Enviar Mensagem 🚀</button>
+        </form>
+        """
+        st.markdown(formspree_html, unsafe_allow_html=True)
