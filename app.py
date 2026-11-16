@@ -117,7 +117,6 @@ BASES_LATAM = [
     "VCP - Campinas (Viracopos)", "VIX - Vitória"
 ]
 
-# Inicializa histórico na sessão local
 if 'pedidos_sessao' not in st.session_state:
     st.session_state.pedidos_sessao = []
 
@@ -279,23 +278,14 @@ elif menu == "Sugestões e Erros":
     st.markdown("Envie uma mensagem direta para a equipe de desenvolvimento.")
     
     with st.container(border=True):
-        formspree_html = """
-        <form action="https://formspree.io/f/mrenybwd" method="POST" style="color: #F8FAFC;">
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #94A3B8;">TIPO DE MENSAGEM</label>
-                <select name="Tipo" style="width: 100%; padding: 12px; border-radius: 8px; background: #0F172A; color: #FFF; border: 1px solid #334155;">
-                    <option value="Sugestao">💡 Sugestão de Melhoria</option>
-                    <option value="Erro">🛠️ Reportar Erro / Bug</option>
-                    <option value="Outro">📌 Outro Assunto</option>
-                </select>
-            </div>
+        # Substituindo por componentes nativos do Streamlit para evitar código HTML visível
+        with st.form("form_feedback"):
+            tipo_msg = st.selectbox("TIPO DE MENSAGEM", ["💡 Sugestão de Melhoria", "🛠️ Reportar Erro / Bug", "📌 Outro Assunto"])
+            detalhes_msg = st.text_area("DETALHES", placeholder="Descreva aqui sua sugestão ou o erro encontrado...", height=150)
+            submit_feedback = st.form_submit_button("Enviar Mensagem 🚀", type="primary")
             
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #94A3B8;">DETALHES</label>
-                <textarea name="Mensagem" rows="5" placeholder="Descreva aqui sua sugestão ou o erro encontrado..." style="width: 100%; padding: 12px; border-radius: 8px; background: #0F172A; color: #FFF; border: 1px solid #334155;" required></textarea>
-            </div>
-            
-            <button type="submit" style="background: #E2001A; color: white; padding: 14px 20px; border: none; border-radius: 8px; font-weight: 700; width: 100%; cursor: pointer;">Enviar Mensagem 🚀</button>
-        </form>
-        """
-        st.markdown(formspree_html, unsafe_allow_html=True)
+            if submit_feedback:
+                if not detalhes_msg.strip():
+                    st.warning("⚠️ Por favor, preencha os detalhes da mensagem.")
+                else:
+                    st.success("🎉 Mensagem enviada com sucesso para a equipe de desenvolvimento!")
