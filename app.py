@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilização CSS refinada (design corporativo com gradiente roxo)
+# Estilização CSS refinada (design corporativo com gradiente roxo e fontes grandes no menu)
 st.markdown("""
     <style>
         .main { background-color: #121824; color: #F8FAFC; }
@@ -27,26 +27,32 @@ st.markdown("""
         .stButton>button:hover {
             background-color: #C50017 !important;
         }
+        /* Remove o ícone padrão do rádio no menu lateral */
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label div:first-child {
             display: none !important;
         }
+        /* Estiliza os itens do menu com bordas roxas e letras maiores */
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label {
-            background-color: #1E293B !important;
-            padding: 12px 16px !important;
-            border-radius: 8px !important;
-            margin-bottom: 8px !important;
-            border: 1px solid #334155 !important;
+            background: linear-gradient(135deg, #1E1B4B 0%, #0F172A 100%) !important;
+            padding: 16px 20px !important;
+            border-radius: 12px !important;
+            margin-bottom: 12px !important;
+            border: 1px solid #7C3AED !important;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15) !important;
             color: #F8FAFC !important;
-            font-weight: 600 !important;
+            font-weight: 700 !important;
+            transition: all 0.2s ease-in-out;
         }
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label:hover {
-            background-color: rgba(226, 0, 26, 0.15) !important;
-            border-color: #E2001A !important;
-            color: #FFFFFF !important;
+            background: linear-gradient(135deg, #2E1065 0%, #1E1B4B 100%) !important;
+            border-color: #A78BFA !important;
+            box-shadow: 0 6px 16px rgba(167, 139, 250, 0.3) !important;
         }
+        /* Aumenta o tamanho do texto interno das opções do menu lateral */
         div[data-testid="stSidebar"] .stRadio label p {
-            font-size: 15px !important;
+            font-size: 17px !important;
             font-family: 'Segoe UI', sans-serif !important;
+            letter-spacing: 0.3px !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -120,11 +126,11 @@ BASES_LATAM = [
 if 'pedidos_sessao' not in st.session_state:
     st.session_state.pedidos_sessao = []
 
-# MENU LATERAL LIMPO
+# MENU LATERAL COM BORDAS RUPAS E LETRAS MAIORES
 st.sidebar.markdown("""
-    <div style="padding: 10px 0; border-bottom: 1px solid #334155; margin-bottom: 20px;">
-        <h2 style="font-size: 20px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h2>
-        <p style="font-size: 12px; color: #94A3B8; margin-top: 4px;">WMS & Logística</p>
+    <div style="padding: 10px 0; border-bottom: 1px solid #7C3AED; margin-bottom: 20px;">
+        <h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h2>
+        <p style="font-size: 13px; color: #A78BFA; margin-top: 4px;">WMS & Logística</p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -138,7 +144,7 @@ menu = st.sidebar.radio("Menu de Navegação", [
 
 # Cabeçalho Principal Estilizado com Gradiente Roxo Corporativo
 st.markdown("""
-    <div style="background: linear-gradient(135deg, #2A0052 0%, #1A0033 100%); padding: 25px 30px; border-radius: 16px; border: 1px solid #4C1D95; box-shadow: 0 8px 20px rgba(0,0,0,0.4); display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+    <div style="background: linear-gradient(135deg, #2A0052 0%, #1A0033 100%); padding: 25px 30px; border-radius: 16px; border: 1px solid #7C3AED; box-shadow: 0 8px 20px rgba(0,0,0,0.4); display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
         <div>
             <h1 style="color: #FFFFFF; font-size: 28px; font-weight: 800; margin: 0;">LATAM Cargo WMS</h1>
             <p style="color: #C4B5FD; font-size: 14px; margin: 5px 0 0 0;">Gestão integrada e ágil de insumos operacionais</p>
@@ -223,7 +229,6 @@ elif menu == "Solicitar Insumos":
                     st.session_state.ultimo_pedido_criado = novo_pedido
                     st.success(f"🎉 Pedido {novo_pedido['id']} registado com sucesso!")
 
-    # Se um pedido acabou de ser criado, exibe o botão dedicado para baixar a planilha do pedido
     if 'ultimo_pedido_criado' in st.session_state:
         p_recente = st.session_state.ultimo_pedido_criado
         st.markdown("---")
@@ -232,7 +237,8 @@ elif menu == "Solicitar Insumos":
         csv_pedido_linhas = ["Part Number (PN);Descricao;Unidade;Preco Unitario (R$);Quantidade Solicitada;Valor Total (R$)"]
         for it in p_recente['itens']:
             subtotal = it['quantidade'] * it['preco']
-            csv_pedido_linhas.append(f"{it['pn']};{it['descricao']};{it['unidade']};{it['preco']};{it['quantidade']};{subtotal:.2f}")
+            pn_formatado = f'="{it["pn"]}"'
+            csv_pedido_linhas.append(f"{pn_formatado};{it['descricao']};{it['unidade']};{it['preco']};{it['quantidade']};{subtotal:.2f}")
         csv_pedido_data = "\n".join(csv_pedido_linhas)
         
         st.download_button(
@@ -245,7 +251,7 @@ elif menu == "Solicitar Insumos":
 
 elif menu == "Conferência e Ajustes":
     st.title("Conferência, Ajustes e Confirmação de Recebimento")
-    st.markdown("Selecione um pedido para conferir o que chegou fisicamente, ajustar e exportar a planilha de recebimento.")
+    st.markdown("Selecione um pedido para editar nomes, alterar quantidades, adicionar ou remover itens, e confirmar o recebimento.")
     
     ids_pedidos = [p['id'] for p in pedidos_db]
     if not ids_pedidos:
@@ -256,6 +262,7 @@ elif menu == "Conferência e Ajustes":
             pedido = next(p for p in pedidos_db if p['id'] == pedido_selecionado_id)
             
             st.markdown(f"**Base:** `{pedido['base']}` | **Status Atual:** `{pedido['status']}`")
+            st.markdown("💡 *Na tabela abaixo você pode clicar nas células para editar nomes, valores, alterar quantidades, ou usar os botões para adicionar/remover linhas:*")
             
             df_itens = pd.DataFrame(pedido['itens'])
             edited_df = st.data_editor(df_itens, num_rows="dynamic", use_container_width=True)
@@ -265,13 +272,13 @@ elif menu == "Conferência e Ajustes":
                 if st.button("Confirmar Recebimento", type="primary"):
                     pedido['itens'] = edited_df.to_dict(orient="records")
                     pedido['status'] = "Recebido"
-                    st.success(f"🎉 Pedido {pedido['id']} marcado como Recebido!")
+                    st.success(f"🎉 Pedido {pedido['id']} marcado como Recebido com os ajustes salvos!")
                     st.rerun()
                     
             with col2:
                 csv_linhas = ["Item;Quantidade"]
                 for i in pedido['itens']:
-                    csv_linhas.append(f"{i['pn']} - {i['descricao']};{i['quantidade']}")
+                    csv_linhas.append(f"{i.get('pn', '')} - {i.get('descricao', '')};{i.get('quantidade', 0)}")
                 csv_data = "\n".join(csv_linhas)
                 
                 st.download_button(
