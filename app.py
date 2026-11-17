@@ -27,11 +27,9 @@ st.markdown("""
         .stButton>button:hover {
             background-color: #C50017 !important;
         }
-        /* Remove o ícone padrão do rádio no menu lateral */
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label div:first-child {
             display: none !important;
         }
-        /* Estiliza os itens do menu com bordas roxas e letras maiores */
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label {
             background: linear-gradient(135deg, #1E1B4B 0%, #0F172A 100%) !important;
             padding: 16px 20px !important;
@@ -48,7 +46,6 @@ st.markdown("""
             border-color: #A78BFA !important;
             box-shadow: 0 6px 16px rgba(167, 139, 250, 0.3) !important;
         }
-        /* Aumenta o tamanho do texto interno das opções do menu lateral */
         div[data-testid="stSidebar"] .stRadio label p {
             font-size: 17px !important;
             font-family: 'Segoe UI', sans-serif !important;
@@ -57,14 +54,14 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Catálogo Oficial de Insumos LATAM Cargo (Calculadora de Insumos)
+# Catálogo Oficial de Insumos LATAM Cargo (Com Preços Unitários Corrigidos pela Planilha)
 CATALOGO_ITENS = [
-    {"pn": "100000000200041651", "descricao": "MANTA PLASTICA ABSORVENTE 1800 X 2400MM", "unidade": "Unidade", "preco": 3890.00},
-    {"pn": "100000000200041665", "descricao": "MANTA PLASTICA ABSORVENTE 1400 X 2400MM", "unidade": "Unidade", "preco": 3400.00},
+    {"pn": "100000000200041651", "descricao": "MANTA PLASTICA ABSORVENTE 1800 X 2400MM", "unidade": "Unidade", "preco": 38.90},
+    {"pn": "100000000200041665", "descricao": "MANTA PLASTICA ABSORVENTE 1400 X 2400MM", "unidade": "Unidade", "preco": 34.00},
     {"pn": "100000000200023681", "descricao": "COPO PAPEL DESCART 180ML BCA NAZAPACK", "unidade": "Unidade", "preco": 0.30},
-    {"pn": "100000000200005306", "descricao": "ETIQUETA POSICAO 11*13CM AUTOADESIVO", "unidade": "Rolo", "preco": 19.86},
+    {"pn": "100000000200005306", "descricao": "ETIQUETA POSICAO 11*13CM AUTOADESIVO", "unidade": "Rolo", "preco": 92.72},
     {"pn": "10042927", "descricao": "ETIQUETA PERECIVEIS", "unidade": "Unidade", "preco": 0.19},
-    {"pn": "10043080", "descricao": "ETIQUETA RAIO-X - PAPEL ROLO", "unidade": "Unidade", "preco": 500.00},
+    {"pn": "10043080", "descricao": "ETIQUETA RAIO-X - PAPEL ROLO", "unidade": "Unidade", "preco": 50.00},
     {"pn": "10042944", "descricao": "SACO LIXO AMARELO 100L PEBD RECICLADO 75cm x 105cm", "unidade": "Unidade", "preco": 0.30},
     {"pn": "10042940", "descricao": "SACO LIXO AZUL 100L PEBD RECICLADO 75cm x 105cm", "unidade": "Unidade", "preco": 0.25},
     {"pn": "10042946", "descricao": "SACO LIXO VERDE 100L PEBD RECICLADO 75cm x 105cm", "unidade": "Unidade", "preco": 0.30},
@@ -100,8 +97,8 @@ CATALOGO_ITENS = [
     {"pn": "10039137", "descricao": "CALCADO SEGURANCA ESPECIAL - TAM 40", "unidade": "PAR", "preco": 104.93},
     {"pn": "10039139", "descricao": "CALCADO SEGURANCA ESPECIAL - TAM 42", "unidade": "PAR", "preco": 104.94},
     {"pn": "10035280", "descricao": "CALCO 150*250*150MM BO KIT DUPLO", "unidade": "Unidade", "preco": 330.00},
-    {"pn": "10042939", "descricao": "ENVELOPE AWB TRANSPARENTE 1 IMPRESSAO", "unidade": "Unidade", "preco": 0.30},
-    {"pn": "10043644", "descricao": "ENVELOPE AWB TRANSPARENTE IMPR. VERMELHO 25x34", "unidade": "Unidade", "preco": 0.60},
+    {"pn": "10042939", "descricao": "ENVELOPE AWB TRANSPARENTE 1 IMPRESSAO", "unidade": "Unidade", "preco": 0.15},
+    {"pn": "10043644", "descricao": "ENVELOPE AWB TRANSPARENTE IMPR. VERMELHO 25x34", "unidade": "Unidade", "preco": 0.24},
     {"pn": "100000000010000277", "descricao": "ETIQUETA CONEXAO 14,5*4,5CM COUCHE", "unidade": "Unidade", "preco": 0.13},
     {"pn": "10042902", "descricao": "LAMINA P/ ESTILETE LARGO", "unidade": "Unidade", "preco": 1.57},
     {"pn": "10043556", "descricao": "LUVA DE SEGURANCA MALHA ALGODAO REVESTIDA (TAM 10)", "unidade": "PAR", "preco": 6.68},
@@ -126,7 +123,7 @@ BASES_LATAM = [
 if 'pedidos_sessao' not in st.session_state:
     st.session_state.pedidos_sessao = []
 
-# MENU LATERAL COM BORDAS RUPAS E LETRAS MAIORES
+# MENU LATERAL COM BORDAS ROXAS E LETRAS MAIORES
 st.sidebar.markdown("""
     <div style="padding: 10px 0; border-bottom: 1px solid #7C3AED; margin-bottom: 20px;">
         <h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h2>
