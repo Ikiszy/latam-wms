@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from supabase import create_client
 
 # Configuração da Página
 st.set_page_config(
@@ -10,7 +11,21 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilização CSS refinada (menu lateral ajustado para largura total com fundos roxos arredondados)
+# Conexão com o Supabase utilizando st.secrets (seguro)
+@st.cache_resource
+def init_supabase():
+    try:
+        url = st.secrets.get("SUPABASE_URL", "")
+        key = st.secrets.get("SUPABASE_KEY", "")
+        if url and key:
+            return create_client(url, key)
+    except Exception:
+        pass
+    return None
+
+supabase = init_supabase()
+
+# Estilização CSS refinada (design corporativo com gradiente roxo e fontes grandes no menu)
 st.markdown("""
     <style>
         .main { background-color: #121824; color: #F8FAFC; }
@@ -61,7 +76,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Catálogo Oficial de Insumos LATAM Cargo (Com Preços Unitários Corrigidos pela Planilha)
+# Catálogo Oficial de Insumos LATAM Cargo
 CATALOGO_ITENS = [
     {"pn": "100000000200041651", "descricao": "MANTA PLASTICA ABSORVENTE 1800 X 2400MM", "unidade": "Unidade", "preco": 38.90},
     {"pn": "100000000200041665", "descricao": "MANTA PLASTICA ABSORVENTE 1400 X 2400MM", "unidade": "Unidade", "preco": 34.00},
@@ -127,10 +142,17 @@ BASES_LATAM = [
     "VCP - Campinas (Viracopos)", "VIX - Vitória"
 ]
 
-if 'pedidos_sessao' not in st.session_state:
-    st.session_state.pedidos_sessao = []
+# Função para carregar pedidos do Supabase
+def carregar_pedidos():
+    if supabase:
+        try:
+            response = supabase.table("pedidos_wms").select("*").execute()
+            return response.data if response.data else []
+        except Exception:
+            return []
+    return []
 
-# MENU LATERAL COM BORDAS ROXAS E LARGURA TOTAL
+# MENU LATERAL
 st.sidebar.markdown("""
     <div style="padding: 10px 0; border-bottom: 1px solid #7C3AED; margin-bottom: 20px;">
         <h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h2>
@@ -146,7 +168,7 @@ menu = st.sidebar.radio("Menu de Navegação", [
     "Sugestões e Erros"
 ], label_visibility="collapsed")
 
-# Cabeçalho Principal Estilizado com Gradiente Roxo Corporativo (Centralizado)
+# Cabeçalho Principal
 st.markdown("""
     <div style="background: linear-gradient(135deg, #2A0052 0%, #1A0033 100%); padding: 30px; border-radius: 16px; border: 1px solid #7C3AED; box-shadow: 0 8px 20px rgba(0,0,0,0.4); text-align: center; margin-bottom: 25px;">
         <h1 style="color: #FFFFFF; font-size: 30px; font-weight: 800; margin: 0;">LATAM Cargo WMS</h1>
@@ -154,12 +176,12 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-pedidos_db = st.session_state.pedidos_sessao
+pedidos_db = carregar_pedidos()
 
 if menu == "Painel de Gestão":
     col1, col2 = st.columns(2)
-    pendentes_count = len([p for p in pedidos_db if p['status'] == "Pendente"])
-    recebidos_count = len([p for p in pedidos_db if p['status'] == "Recebido"])
+    pendentes_count = len([p for p in pedidos_db if p.get('status') == "Pendente"])
+    recebidos_count = len([p for p in pedidos_db if p.get('status') == "Recebido"])
     
     with col1:
         with st.container(border=True):
@@ -174,17 +196,25 @@ if menu == "Painel de Gestão":
     st.markdown("### Histórico de Solicitações Recentes")
     with st.container(border=True):
         if pedidos_db:
-            df_base = pd.DataFrame(pedidos_db)[['id', 'data', 'base', 'valorTotal', 'status']]
-            df_base.columns = ["ID PEDIDO", "DATA/HORA PEDIDO", "BASE", "VALOR TOTAL (R$)", "STATUS"]
+            df_base = pd.DataFrame(pedidos_db)[['id', 'data', 'base', 'solicitante', 'bp', 'valor_total', 'status']]
+            df_base.columns = ["ID PEDIDO", "DATA/HORA", "BASE", "SOLICITANTE", "BP", "VALOR TOTAL (R$)", "STATUS"]
             st.dataframe(df_base, use_container_width=True)
         else:
-            st.info("Nenhum pedido registado nesta sessão ainda.")
+            st.info("Nenhum pedido registado no sistema ainda.")
 
 elif menu == "Solicitar Insumos":
     st.title("Nova Requisição de Materiais")
-    st.markdown("Preencha a calculadora de insumos desejados. Ao registrar, o sistema gerará a **Planilha de Pedido Oficial** para download:")
+    st.markdown("Preencha seus dados de identificação e a calculadora de insumos desejados:")
     
-    base_selecionada = st.selectbox("Base Operacional Solicitante", BASES_LATAM)
+    with st.container(border=True):
+        st.markdown("### 👤 Identificação do Solicitante")
+        col_id1, col_id2, col_id3 = st.columns(3)
+        with col_id1:
+            nome_solicitante = st.text_input("Seu Nome Completo")
+        with col_id2:
+            bp_solicitante = st.text_input("Seu BP (Matrícula)")
+        with col_id3:
+            base_selecionada = st.selectbox("Base Operacional Solicitante", BASES_LATAM)
     
     with st.container(border=True):
         quantidades = {}
@@ -206,27 +236,40 @@ elif menu == "Solicitar Insumos":
             submit_pedido = st.form_submit_button("REGISTRAR E GERAR PLANILHA DE PEDIDO 🚀", type="primary")
             
             if submit_pedido:
-                itens_solicitados = []
-                for item in CATALOGO_ITENS:
-                    qtd = quantidades[item['pn']]
-                    if qtd > 0:
-                        itens_solicitados.append({**item, "quantidade": qtd})
-                        
-                if not itens_solicitados:
-                    st.warning("⚠️ Insira ao menos uma quantidade desejada.")
+                if not nome_solicitante.strip() or not bp_solicitante.strip():
+                    st.warning("⚠️ Por favor, preencha seu Nome e seu BP antes de registrar o pedido.")
                 else:
-                    novo_pedido = {
-                        "id": f"PED-{base_selecionada.split(' - ')[0]}-{str(datetime.now().timestamp())[-4:]}",
-                        "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                        "data_recebimento": "Pendente",
-                        "base": base_selecionada,
-                        "valorTotal": total_geral,
-                        "status": "Pendente",
-                        "itens": itens_solicitados
-                    }
-                    st.session_state.pedidos_sessao.append(novo_pedido)
-                    st.session_state.ultimo_pedido_criado = novo_pedido
-                    st.success(f"🎉 Pedido {novo_pedido['id']} registado com sucesso!")
+                    itens_solicitados = []
+                    for item in CATALOGO_ITENS:
+                        qtd = quantidades[item['pn']]
+                        if qtd > 0:
+                            itens_solicitados.append({**item, "quantidade": qtd})
+                            
+                    if not itens_solicitados:
+                        st.warning("⚠️ Insira ao menos uma quantidade desejada.")
+                    else:
+                        novo_pedido = {
+                            "id": f"PED-{base_selecionada.split(' - ')[0]}-{str(datetime.now().timestamp())[-4:]}",
+                            "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                            "data_recebimento": "Pendente",
+                            "base": base_selecionada,
+                            "solicitante": nome_solicitante,
+                            "bp": bp_solicitante,
+                            "valor_total": total_geral,
+                            "status": "Pendente",
+                            "itens": itens_solicitados
+                        }
+                        
+                        # Salva no Supabase
+                        if supabase:
+                            try:
+                                supabase.table("pedidos_wms").insert(novo_pedido).execute()
+                                st.session_state.ultimo_pedido_criado = novo_pedido
+                                st.success(f"🎉 Pedido {novo_pedido['id']} registado e salvo na nuvem com sucesso!")
+                            except Exception as e:
+                                st.error(f"Erro ao salvar no banco de dados: {e}")
+                        else:
+                            st.error("⚠️ Conexão com o Supabase não configurada nos Secrets do Streamlit.")
 
     if 'ultimo_pedido_criado' in st.session_state:
         p_recente = st.session_state.ultimo_pedido_criado
@@ -250,7 +293,7 @@ elif menu == "Solicitar Insumos":
 
 elif menu == "Conferência e Ajustes":
     st.title("Conferência, Ajustes e Confirmação de Recebimento")
-    st.markdown("Selecione um pedido para editar nomes, alterar quantidades, adicionar ou remover itens, e confirmar o recebimento.")
+    st.markdown("Selecione um pedido para conferir, editar itens e confirmar o recebimento.")
     
     ids_pedidos = [p['id'] for p in pedidos_db]
     if not ids_pedidos:
@@ -260,7 +303,7 @@ elif menu == "Conferência e Ajustes":
             pedido_selecionado_id = st.selectbox("Selecione o Pedido", ids_pedidos)
             pedido = next(p for p in pedidos_db if p['id'] == pedido_selecionado_id)
             
-            st.markdown(f"**Base:** `{pedido['base']}` | **Status Atual:** `{pedido['status']}` | **Data do Pedido:** `{pedido['data']}`")
+            st.markdown(f"**Base:** `{pedido['base']}` | **Solicitante:** `{pedido.get('solicitante', 'N/A')} (BP: {pedido.get('bp', 'N/A')})` | **Status:** `{pedido['status']}`")
             st.markdown("💡 *Na tabela abaixo você pode clicar nas células para editar nomes, valores, alterar quantidades, ou usar os botões para adicionar/remover linhas:*")
             
             df_itens = pd.DataFrame(pedido['itens'])
@@ -269,11 +312,18 @@ elif menu == "Conferência e Ajustes":
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("Confirmar Recebimento", type="primary"):
-                    pedido['itens'] = edited_df.to_dict(orient="records")
-                    pedido['status'] = "Recebido"
-                    pedido['data_recebimento'] = datetime.now().strftime("%d/%m/%Y %H:%M")
-                    st.success(f"🎉 Pedido {pedido['id']} marcado como Recebido e data registrada com sucesso!")
-                    st.rerun()
+                    data_rec = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    if supabase:
+                        try:
+                            supabase.table("pedidos_wms").update({
+                                "itens": edited_df.to_dict(orient="records"),
+                                "status": "Recebido",
+                                "data_recebimento": data_rec
+                            }).eq("id", pedido['id']).execute()
+                            st.success(f"🎉 Pedido {pedido['id']} marcado como Recebido na nuvem!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erro ao atualizar: {e}")
                     
             with col2:
                 csv_linhas = ["Item;Quantidade"]
@@ -290,25 +340,26 @@ elif menu == "Conferência e Ajustes":
 
 elif menu == "Histórico Geral":
     st.title("Auditoria e Histórico Geral")
-    st.markdown("Consolidado completo de todas as solicitações registradas, contendo data/hora do pedido e data/hora do recebimento.")
+    st.markdown("Consolidado completo salvo em nuvem de todas as solicitações registradas.")
     
     with st.container(border=True):
         if pedidos_db:
-            # Cria um resumo detalhado para o histórico geral
             dados_historico = []
             for p in pedidos_db:
                 dados_historico.append({
                     "ID do Pedido": p['id'],
                     "Base": p['base'],
+                    "Solicitante": p.get('solicitante', 'N/A'),
+                    "BP": p.get('bp', 'N/A'),
                     "Data/Hora do Pedido": p['data'],
-                    "Data/Hora do Recebimento": p.get('data_recebimento', 'Pendente'),
-                    "Valor Total (R$)": f"R$ {p['valorTotal']:,.2f}",
+                    "Data/Hora Recebimento": p.get('data_recebimento', 'Pendente'),
+                    "Valor Total (R$)": f"R$ {p['valor_total']:,.2f}",
                     "Status": p['status']
                 })
             df_geral = pd.DataFrame(dados_historico)
             st.dataframe(df_geral, use_container_width=True)
         else:
-            st.info("Nenhum pedido registado no sistema nesta sessão.")
+            st.info("Nenhum pedido registado no sistema.")
 
 elif menu == "Sugestões e Erros":
     st.title("Central de Feedback e Sugestões")
@@ -316,7 +367,7 @@ elif menu == "Sugestões e Erros":
     
     with st.container(border=True):
         with st.form("form_feedback"):
-            tipo_msg = st.selectbox("TIPO DE MESSAGE", ["💡 Sugestão de Melhoria", "🛠️ Reportar Erro / Bug", "📌 Outro Assunto"])
+            tipo_msg = st.selectbox("TIPO DE MENSAGEM", ["💡 Sugestão de Melhoria", "🛠️ Reportar Erro / Bug", "📌 Outro Assunto"])
             detalhes_msg = st.text_area("DETALHES", placeholder="Descreva aqui sua sugestão ou o erro encontrado...", height=150)
             submit_feedback = st.form_submit_button("Enviar Mensagem 🚀", type="primary")
             
