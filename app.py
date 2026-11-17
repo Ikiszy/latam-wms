@@ -239,7 +239,7 @@ if menu == "Painel de Gestão":
 
 elif menu == "Solicitar Insumos":
     st.title("Nova Requisição de Materiais")
-    st.markdown("Preencha seus dados de identificação e utilize os botões `+` / `-` ou digite diretamente a quantidade desejada:")
+    st.markdown("Preencha seus dados de identificação e utilize os campos numéricos para definir as quantidades:")
     
     with st.container(border=True):
         st.markdown("### 👤 Identificação do Solicitante")
@@ -255,8 +255,7 @@ elif menu == "Solicitar Insumos":
         with st.form("form_solicitacao_insumos"):
             quantidades = {}
             for idx, item in enumerate(CATALOGO_ITENS):
-                # Layout reorganizado para incluir botões de mais e menos
-                c_pn, c_desc, c_preco, c_menos, c_qtd, c_mais = st.columns([2.2, 4, 1.2, 0.6, 1.2, 0.6])
+                c_pn, c_desc, c_preco, c_qtd = st.columns([2.5, 4.5, 1.3, 1.5])
                 
                 with c_pn:
                     st.text(item['pn'])
@@ -264,21 +263,9 @@ elif menu == "Solicitar Insumos":
                     st.text(item['descricao'])
                 with c_preco:
                     st.text(f"R$ {item['preco']:.2f}")
-                
-                # Chave única para o estado do number_input
-                key_qtd = f"qtd_{idx}"
-                if key_qtd not in st.session_state:
-                    st.session_state[key_qtd] = 0
-                
-                with c_menos:
-                    if st.form_submit_button("➖", key=f"menos_{idx}"):
-                        if st.session_state[key_qtd] > 0:
-                            st.session_state[key_qtd] -= 1
                 with c_qtd:
-                    quantidades[item['pn']] = st.number_input("Qtd", min_value=0, value=st.session_state[key_qtd], key=key_qtd, label_visibility="collapsed")
-                with c_mais:
-                    if st.form_submit_button("➕", key=f"mais_{idx}"):
-                        st.session_state[key_qtd] += 1
+                    # Cada número já inclui setinhas nativas e permite digitação livre de qualquer valor
+                    quantidades[item['pn']] = st.number_input("Qtd", min_value=0, value=0, key=f"qtd_{idx}", label_visibility="collapsed")
                     
             total_geral = sum(q * next(i['preco'] for i in CATALOGO_ITENS if i['pn'] == pn) for pn, q in quantidades.items() if q > 0)
             st.markdown(f"### Valor Total Estimado: R$ {total_geral:,.2f}")
