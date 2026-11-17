@@ -146,11 +146,11 @@ BASES_LATAM = [
     "VCP - Campinas (Viracopos)", "VIX - Vitória"
 ]
 
-# Função para carregar pedidos do Supabase
+# Função para carregar pedidos do Supabase (tabela: pedidos_wm)
 def carregar_pedidos():
     if supabase:
         try:
-            response = supabase.table("pedidos_wms").select("*").execute()
+            response = supabase.table("pedidos_wm").select("*").execute()
             return response.data if response.data else []
         except Exception:
             return []
@@ -264,10 +264,10 @@ elif menu == "Solicitar Insumos":
                             "itens": itens_solicitados
                         }
                         
-                        # Salva no Supabase
+                        # Salva no Supabase (tabela: pedidos_wm)
                         if supabase:
                             try:
-                                supabase.table("pedidos_wms").insert(novo_pedido).execute()
+                                supabase.table("pedidos_wm").insert(novo_pedido).execute()
                                 st.session_state.ultimo_pedido_criado = novo_pedido
                                 st.success(f"🎉 Pedido {novo_pedido['id']} registado e salvo na nuvem com sucesso!")
                             except Exception as e:
@@ -308,7 +308,7 @@ elif menu == "Conferência e Ajustes":
             pedido = next(p for p in pedidos_db if p['id'] == pedido_selecionado_id)
             
             st.markdown(f"**Base:** `{pedido['base']}` | **Solicitante:** `{pedido.get('solicitante', 'N/A')} (BP: {pedido.get('bp', 'N/A')})` | **Status:** `{pedido['status']}`")
-            st.markdown("💡 *Na tabela abaixo você pode clicar nas células para editar nomes, valores, alterar quantidades, ou usar os botões para adicionar/remover linhas:*")
+            st.markdown("💡 *Na tabela abaixo pode clicar nas células para editar nomes, valores, alterar quantidades, ou usar os botões para adicionar/remover linhas:*")
             
             df_itens = pd.DataFrame(pedido['itens'])
             edited_df = st.data_editor(df_itens, num_rows="dynamic", use_container_width=True)
@@ -319,7 +319,7 @@ elif menu == "Conferência e Ajustes":
                     data_rec = datetime.now().strftime("%d/%m/%Y %H:%M")
                     if supabase:
                         try:
-                            supabase.table("pedidos_wms").update({
+                            supabase.table("pedidos_wm").update({
                                 "itens": edited_df.to_dict(orient="records"),
                                 "status": "Recebido",
                                 "data_recebimento": data_rec
@@ -367,7 +367,7 @@ elif menu == "Histórico Geral":
 
 elif menu == "Sugestões e Erros":
     st.title("Central de Feedback e Sugestões")
-    st.markdown("Envie uma mensagem direta para a equipe de desenvolvimento.")
+    st.markdown("Envie uma mensagem direta para a equipa de desenvolvimento.")
     
     with st.container(border=True):
         with st.form("form_feedback"):
@@ -379,4 +379,4 @@ elif menu == "Sugestões e Erros":
                 if not detalhes_msg.strip():
                     st.warning("⚠️ Por favor, preencha os detalhes da mensagem.")
                 else:
-                    st.success("🎉 Mensagem enviada com sucesso para a equipe de desenvolvimento!")
+                    st.success("🎉 Mensagem enviada com sucesso para a equipa de desenvolvimento!")
