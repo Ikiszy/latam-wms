@@ -139,17 +139,11 @@ menu = st.sidebar.radio("Menu de Navegação", [
     "Sugestões e Erros"
 ], label_visibility="collapsed")
 
-# Cabeçalho Principal Estilizado com Gradiente Roxo Corporativo
+# Cabeçalho Principal Estilizado com Gradiente Roxo Corporativo (Centralizado)
 st.markdown("""
-    <div style="background: linear-gradient(135deg, #2A0052 0%, #1A0033 100%); padding: 25px 30px; border-radius: 16px; border: 1px solid #7C3AED; box-shadow: 0 8px 20px rgba(0,0,0,0.4); display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-        <div>
-            <h1 style="color: #FFFFFF; font-size: 28px; font-weight: 800; margin: 0;">LATAM Cargo WMS</h1>
-            <p style="color: #C4B5FD; font-size: 14px; margin: 5px 0 0 0;">Gestão integrada e ágil de insumos operacionais</p>
-        </div>
-        <div style="text-align: right;">
-            <span style="color: #FFFFFF; font-size: 16px; font-weight: 700; display: block;">Modo Direto</span>
-            <span style="color: #A78BFA; font-size: 13px;">Sem Autenticação</span>
-        </div>
+    <div style="background: linear-gradient(135deg, #2A0052 0%, #1A0033 100%); padding: 30px; border-radius: 16px; border: 1px solid #7C3AED; box-shadow: 0 8px 20px rgba(0,0,0,0.4); text-align: center; margin-bottom: 25px;">
+        <h1 style="color: #FFFFFF; font-size: 30px; font-weight: 800; margin: 0;">LATAM Cargo WMS</h1>
+        <p style="color: #C4B5FD; font-size: 15px; margin: 8px 0 0 0;">Gestão integrada e ágil de insumos operacionais</p>
     </div>
 """, unsafe_allow_html=True)
 
