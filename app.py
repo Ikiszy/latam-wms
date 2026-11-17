@@ -11,16 +11,19 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Conexão com o Supabase utilizando st.secrets (seguro)
+# Conexão com o Supabase com limpeza de espaços e validação rigorosa
 @st.cache_resource
 def init_supabase():
     try:
-        url = st.secrets.get("SUPABASE_URL", "")
-        key = st.secrets.get("SUPABASE_KEY", "")
+        url = st.secrets.get("SUPABASE_URL", "").strip()
+        key = st.secrets.get("SUPABASE_KEY", "").strip()
         
         if not url or not key:
-            st.error("⚠️ As chaves do Supabase (SUPABASE_URL ou SUPABASE_KEY) não foram encontradas nos Secrets do Streamlit.")
+            st.error("⚠️ As chaves do Supabase não foram encontradas nos Secrets.")
             return None
+            
+        if not url.startswith("https://"):
+            url = f"https://{url}"
             
         return create_client(url, key)
     except Exception as e:
