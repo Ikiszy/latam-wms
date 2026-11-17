@@ -1,1 +1,21 @@
-[]
+[
+    {
+        "id": "PED-FOR-3949",
+        "data": "17/11/2026 20:26",
+        "data_recebimento": "Pendente",
+        "base": "FOR - Fortaleza",
+        "solicitante": "Isadora Sousa Lima",
+        "bp": "4872423",
+        "valor_total": 144.0,
+        "status": "Pendente",
+        "itens": [
+            {
+                "pn": "10050462",
+                "descricao": "ETIQUETA ADESIVA EMBORRACHADA",
+                "unidade": "Rolo",
+                "preco": 36.0,
+                "quantidade": 4
+            }
+        ]
+    }
+]
