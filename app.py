@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilização CSS refinada (design corporativo com gradiente roxo e fontes grandes no menu)
+# Estilização CSS refinada (menu lateral ajustado para ocupar 100% da largura com caixas roxas)
 st.markdown("""
     <style>
         .main { background-color: #121824; color: #F8FAFC; }
@@ -27,9 +27,15 @@ st.markdown("""
         .stButton>button:hover {
             background-color: #C50017 !important;
         }
+        /* Remove o ícone padrão do rádio no menu lateral */
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label div:first-child {
             display: none !important;
         }
+        /* Faz o radio group ocupar toda a largura do sidebar */
+        div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] {
+            width: 100% !important;
+        }
+        /* Estiliza cada item do menu com largura total, borda roxa e fundo arredondado */
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label {
             background: linear-gradient(135deg, #1E1B4B 0%, #0F172A 100%) !important;
             padding: 16px 20px !important;
@@ -39,6 +45,9 @@ st.markdown("""
             box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15) !important;
             color: #F8FAFC !important;
             font-weight: 700 !important;
+            width: 100% !important;
+            display: flex !important;
+            align-items: center !important;
             transition: all 0.2s ease-in-out;
         }
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label:hover {
@@ -50,6 +59,7 @@ st.markdown("""
             font-size: 17px !important;
             font-family: 'Segoe UI', sans-serif !important;
             letter-spacing: 0.3px !important;
+            width: 100% !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -123,7 +133,7 @@ BASES_LATAM = [
 if 'pedidos_sessao' not in st.session_state:
     st.session_state.pedidos_sessao = []
 
-# MENU LATERAL COM BORDAS ROXAS E LETRAS MAIORES
+# MENU LATERAL COM BORDAS ROXAS E LARGURA TOTAL
 st.sidebar.markdown("""
     <div style="padding: 10px 0; border-bottom: 1px solid #7C3AED; margin-bottom: 20px;">
         <h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h2>
