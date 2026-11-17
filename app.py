@@ -17,11 +17,15 @@ def init_supabase():
     try:
         url = st.secrets.get("SUPABASE_URL", "")
         key = st.secrets.get("SUPABASE_KEY", "")
-        if url and key:
-            return create_client(url, key)
-    except Exception:
-        pass
-    return None
+        
+        if not url or not key:
+            st.error("⚠️ As chaves do Supabase (SUPABASE_URL ou SUPABASE_KEY) não foram encontradas nos Secrets do Streamlit.")
+            return None
+            
+        return create_client(url, key)
+    except Exception as e:
+        st.error(f"Erro crítico ao inicializar o Supabase: {e}")
+        return None
 
 supabase = init_supabase()
 
