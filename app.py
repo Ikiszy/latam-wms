@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Conexão com o Supabase com limpeza de espaços e validação rigorosa
+# Conexão com o Supabase segura
 @st.cache_resource
 def init_supabase():
     try:
@@ -27,12 +27,12 @@ def init_supabase():
             
         return create_client(url, key)
     except Exception as e:
-        st.error(f"Erro crítico ao inicializar o Supabase: {e}")
+        st.error(f"Erro ao inicializar o Supabase: {e}")
         return None
 
 supabase = init_supabase()
 
-# Estilização CSS refinada (design corporativo com gradiente roxo e fontes grandes no menu)
+# Estilização CSS refinada
 st.markdown("""
     <style>
         .main { background-color: #121824; color: #F8FAFC; }
@@ -149,7 +149,7 @@ BASES_LATAM = [
     "VCP - Campinas (Viracopos)", "VIX - Vitória"
 ]
 
-# Função para carregar pedidos do Supabase (tabela: pedidos_wm)
+# Função para carregar pedidos do Supabase
 def carregar_pedidos():
     if supabase:
         try:
@@ -267,7 +267,7 @@ elif menu == "Solicitar Insumos":
                             "itens": itens_solicitados
                         }
                         
-                        # Salva no Supabase (tabela: pedidos_wm)
+                        # Salva no Supabase
                         if supabase:
                             try:
                                 supabase.table("pedidos_wm").insert(novo_pedido).execute()
