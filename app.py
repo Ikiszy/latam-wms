@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from supabase import create_client
 
 # Configuração da Página
 st.set_page_config(
@@ -10,7 +11,21 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilização CSS refinada (design corporativo com gradiente roxo)
+# Conexão com o Supabase utilizando st.secrets (seguro)
+@st.cache_resource
+def init_supabase():
+    try:
+        url = st.secrets.get("SUPABASE_URL", "")
+        key = st.secrets.get("SUPABASE_KEY", "")
+        if url and key:
+            return create_client(url, key)
+    except Exception:
+        pass
+    return None
+
+supabase = init_supabase()
+
+# Estilização CSS refinada (design corporativo com gradiente roxo e fontes grandes no menu)
 st.markdown("""
     <style>
         .main { background-color: #121824; color: #F8FAFC; }
@@ -30,35 +45,45 @@ st.markdown("""
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label div:first-child {
             display: none !important;
         }
+        div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] {
+            width: 100% !important;
+        }
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label {
-            background-color: #1E293B !important;
-            padding: 12px 16px !important;
-            border-radius: 8px !important;
-            margin-bottom: 8px !important;
-            border: 1px solid #334155 !important;
+            background: linear-gradient(135deg, #1E1B4B 0%, #0F172A 100%) !important;
+            padding: 16px 20px !important;
+            border-radius: 12px !important;
+            margin-bottom: 12px !important;
+            border: 1px solid #7C3AED !important;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15) !important;
             color: #F8FAFC !important;
-            font-weight: 600 !important;
+            font-weight: 700 !important;
+            width: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            transition: all 0.2s ease-in-out;
         }
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label:hover {
-            background-color: rgba(226, 0, 26, 0.15) !important;
-            border-color: #E2001A !important;
-            color: #FFFFFF !important;
+            background: linear-gradient(135deg, #2E1065 0%, #1E1B4B 100%) !important;
+            border-color: #A78BFA !important;
+            box-shadow: 0 6px 16px rgba(167, 139, 250, 0.3) !important;
         }
         div[data-testid="stSidebar"] .stRadio label p {
-            font-size: 15px !important;
+            font-size: 17px !important;
             font-family: 'Segoe UI', sans-serif !important;
+            letter-spacing: 0.3px !important;
+            width: 100% !important;
         }
     </style>
 """, unsafe_allow_html=True)
 
 # Catálogo Oficial de Insumos LATAM Cargo
 CATALOGO_ITENS = [
-    {"pn": "100000000200041651", "descricao": "MANTA PLASTICA ABSORVENTE 1800 X 2400MM", "unidade": "Unidade", "preco": 3890.00},
-    {"pn": "100000000200041665", "descricao": "MANTA PLASTICA ABSORVENTE 1400 X 2400MM", "unidade": "Unidade", "preco": 3400.00},
+    {"pn": "100000000200041651", "descricao": "MANTA PLASTICA ABSORVENTE 1800 X 2400MM", "unidade": "Unidade", "preco": 38.90},
+    {"pn": "100000000200041665", "descricao": "MANTA PLASTICA ABSORVENTE 1400 X 2400MM", "unidade": "Unidade", "preco": 34.00},
     {"pn": "100000000200023681", "descricao": "COPO PAPEL DESCART 180ML BCA NAZAPACK", "unidade": "Unidade", "preco": 0.30},
-    {"pn": "100000000200005306", "descricao": "ETIQUETA POSICAO 11*13CM AUTOADESIVO", "unidade": "Rolo", "preco": 19.86},
+    {"pn": "100000000200005306", "descricao": "ETIQUETA POSICAO 11*13CM AUTOADESIVO", "unidade": "Rolo", "preco": 92.72},
     {"pn": "10042927", "descricao": "ETIQUETA PERECIVEIS", "unidade": "Unidade", "preco": 0.19},
-    {"pn": "10043080", "descricao": "ETIQUETA RAIO-X - PAPEL ROLO", "unidade": "Unidade", "preco": 500.00},
+    {"pn": "10043080", "descricao": "ETIQUETA RAIO-X - PAPEL ROLO", "unidade": "Unidade", "preco": 50.00},
     {"pn": "10042944", "descricao": "SACO LIXO AMARELO 100L PEBD RECICLADO 75cm x 105cm", "unidade": "Unidade", "preco": 0.30},
     {"pn": "10042940", "descricao": "SACO LIXO AZUL 100L PEBD RECICLADO 75cm x 105cm", "unidade": "Unidade", "preco": 0.25},
     {"pn": "10042946", "descricao": "SACO LIXO VERDE 100L PEBD RECICLADO 75cm x 105cm", "unidade": "Unidade", "preco": 0.30},
@@ -94,8 +119,8 @@ CATALOGO_ITENS = [
     {"pn": "10039137", "descricao": "CALCADO SEGURANCA ESPECIAL - TAM 40", "unidade": "PAR", "preco": 104.93},
     {"pn": "10039139", "descricao": "CALCADO SEGURANCA ESPECIAL - TAM 42", "unidade": "PAR", "preco": 104.94},
     {"pn": "10035280", "descricao": "CALCO 150*250*150MM BO KIT DUPLO", "unidade": "Unidade", "preco": 330.00},
-    {"pn": "10042939", "descricao": "ENVELOPE AWB TRANSPARENTE 1 IMPRESSAO", "unidade": "Unidade", "preco": 0.30},
-    {"pn": "10043644", "descricao": "ENVELOPE AWB TRANSPARENTE IMPR. VERMELHO 25x34", "unidade": "Unidade", "preco": 0.60},
+    {"pn": "10042939", "descricao": "ENVELOPE AWB TRANSPARENTE 1 IMPRESSAO", "unidade": "Unidade", "preco": 0.15},
+    {"pn": "10043644", "descricao": "ENVELOPE AWB TRANSPARENTE IMPR. VERMELHO 25x34", "unidade": "Unidade", "preco": 0.24},
     {"pn": "100000000010000277", "descricao": "ETIQUETA CONEXAO 14,5*4,5CM COUCHE", "unidade": "Unidade", "preco": 0.13},
     {"pn": "10042902", "descricao": "LAMINA P/ ESTILETE LARGO", "unidade": "Unidade", "preco": 1.57},
     {"pn": "10043556", "descricao": "LUVA DE SEGURANCA MALHA ALGODAO REVESTIDA (TAM 10)", "unidade": "PAR", "preco": 6.68},
@@ -117,14 +142,21 @@ BASES_LATAM = [
     "VCP - Campinas (Viracopos)", "VIX - Vitória"
 ]
 
-if 'pedidos_sessao' not in st.session_state:
-    st.session_state.pedidos_sessao = []
+# Função para carregar pedidos do Supabase
+def carregar_pedidos():
+    if supabase:
+        try:
+            response = supabase.table("pedidos_wms").select("*").execute()
+            return response.data if response.data else []
+        except Exception:
+            return []
+    return []
 
-# MENU LATERAL LIMPO
+# MENU LATERAL
 st.sidebar.markdown("""
-    <div style="padding: 10px 0; border-bottom: 1px solid #334155; margin-bottom: 20px;">
-        <h2 style="font-size: 20px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h2>
-        <p style="font-size: 12px; color: #94A3B8; margin-top: 4px;">WMS & Logística</p>
+    <div style="padding: 10px 0; border-bottom: 1px solid #7C3AED; margin-bottom: 20px;">
+        <h2 style="font-size: 22px; font-weight: 800; color: #FFFFFF; margin: 0;">LATAM <span style="color: #E2001A;">Cargo</span></h2>
+        <p style="font-size: 13px; color: #A78BFA; margin-top: 4px;">WMS & Logística</p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -136,26 +168,20 @@ menu = st.sidebar.radio("Menu de Navegação", [
     "Sugestões e Erros"
 ], label_visibility="collapsed")
 
-# Cabeçalho Principal Estilizado com Gradiente Roxo Corporativo
+# Cabeçalho Principal
 st.markdown("""
-    <div style="background: linear-gradient(135deg, #2A0052 0%, #1A0033 100%); padding: 25px 30px; border-radius: 16px; border: 1px solid #4C1D95; box-shadow: 0 8px 20px rgba(0,0,0,0.4); display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-        <div>
-            <h1 style="color: #FFFFFF; font-size: 28px; font-weight: 800; margin: 0;">LATAM Cargo WMS</h1>
-            <p style="color: #C4B5FD; font-size: 14px; margin: 5px 0 0 0;">Gestão integrada e ágil de insumos operacionais</p>
-        </div>
-        <div style="text-align: right;">
-            <span style="color: #FFFFFF; font-size: 16px; font-weight: 700; display: block;">Modo Direto</span>
-            <span style="color: #A78BFA; font-size: 13px;">Sem Autenticação</span>
-        </div>
+    <div style="background: linear-gradient(135deg, #2A0052 0%, #1A0033 100%); padding: 30px; border-radius: 16px; border: 1px solid #7C3AED; box-shadow: 0 8px 20px rgba(0,0,0,0.4); text-align: center; margin-bottom: 25px;">
+        <h1 style="color: #FFFFFF; font-size: 30px; font-weight: 800; margin: 0;">LATAM Cargo WMS</h1>
+        <p style="color: #C4B5FD; font-size: 15px; margin: 8px 0 0 0;">Gestão integrada e ágil de insumos operacionais</p>
     </div>
 """, unsafe_allow_html=True)
 
-pedidos_db = st.session_state.pedidos_sessao
+pedidos_db = carregar_pedidos()
 
 if menu == "Painel de Gestão":
     col1, col2 = st.columns(2)
-    pendentes_count = len([p for p in pedidos_db if p['status'] == "Pendente"])
-    recebidos_count = len([p for p in pedidos_db if p['status'] == "Recebido"])
+    pendentes_count = len([p for p in pedidos_db if p.get('status') == "Pendente"])
+    recebidos_count = len([p for p in pedidos_db if p.get('status') == "Recebido"])
     
     with col1:
         with st.container(border=True):
@@ -167,20 +193,28 @@ if menu == "Painel de Gestão":
             st.markdown("<span style='font-size: 12px; font-weight: 700; color: #38A169; letter-spacing: 1px;'>PEDIDOS APROVADOS / RECEBIDOS</span>", unsafe_allow_html=True)
             st.markdown(f"<h3 style='font-size: 38px; font-weight: 800; color: #FFFFFF; margin-top: 5px;'>{recebidos_count}</h3>", unsafe_allow_html=True)
         
-    st.markdown("### Histórico de Solicitações")
+    st.markdown("### Histórico de Solicitações Recentes")
     with st.container(border=True):
         if pedidos_db:
-            df_base = pd.DataFrame(pedidos_db)[['id', 'data', 'base', 'valorTotal', 'status']]
-            df_base.columns = ["ID PEDIDO", "DATA", "BASE", "VALOR TOTAL (R$)", "STATUS"]
+            df_base = pd.DataFrame(pedidos_db)[['id', 'data', 'base', 'solicitante', 'bp', 'valor_total', 'status']]
+            df_base.columns = ["ID PEDIDO", "DATA/HORA", "BASE", "SOLICITANTE", "BP", "VALOR TOTAL (R$)", "STATUS"]
             st.dataframe(df_base, use_container_width=True)
         else:
-            st.info("Nenhum pedido registado nesta sessão ainda.")
+            st.info("Nenhum pedido registado no sistema ainda.")
 
 elif menu == "Solicitar Insumos":
     st.title("Nova Requisição de Materiais")
-    st.markdown("Selecione sua base operacional e preencha as quantidades desejadas abaixo:")
+    st.markdown("Preencha seus dados de identificação e a calculadora de insumos desejados:")
     
-    base_selecionada = st.selectbox("Base Operacional Solicitante", BASES_LATAM)
+    with st.container(border=True):
+        st.markdown("### 👤 Identificação do Solicitante")
+        col_id1, col_id2, col_id3 = st.columns(3)
+        with col_id1:
+            nome_solicitante = st.text_input("Seu Nome Completo")
+        with col_id2:
+            bp_solicitante = st.text_input("Seu BP (Matrícula)")
+        with col_id3:
+            base_selecionada = st.selectbox("Base Operacional Solicitante", BASES_LATAM)
     
     with st.container(border=True):
         quantidades = {}
@@ -199,33 +233,67 @@ elif menu == "Solicitar Insumos":
             total_geral = sum(q * next(i['preco'] for i in CATALOGO_ITENS if i['pn'] == pn) for pn, q in quantidades.items() if q > 0)
             st.markdown(f"### Valor Total Estimado: R$ {total_geral:,.2f}")
             
-            submit_pedido = st.form_submit_button("SALVAR E REGISTRAR PEDIDO 🚀", type="primary")
+            submit_pedido = st.form_submit_button("REGISTRAR E GERAR PLANILHA DE PEDIDO 🚀", type="primary")
             
             if submit_pedido:
-                itens_solicitados = []
-                for item in CATALOGO_ITENS:
-                    qtd = quantidades[item['pn']]
-                    if qtd > 0:
-                        itens_solicitados.append({**item, "quantidade": qtd})
-                        
-                if not itens_solicitados:
-                    st.warning("⚠️ Insira ao menos uma quantidade desejada.")
+                if not nome_solicitante.strip() or not bp_solicitante.strip():
+                    st.warning("⚠️ Por favor, preencha seu Nome e seu BP antes de registrar o pedido.")
                 else:
-                    novo_pedido = {
-                        "id": f"PED-{base_selecionada.split(' - ')[0]}-{str(datetime.now().timestamp())[-4:]}",
-                        "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                        "base": base_selecionada,
-                        "valorTotal": total_geral,
-                        "status": "Pendente",
-                        "itens": itens_solicitados
-                    }
-                    st.session_state.pedidos_sessao.append(novo_pedido)
-                    st.success(f"🎉 Pedido {novo_pedido['id']} registado com sucesso!")
-                    st.rerun()
+                    itens_solicitados = []
+                    for item in CATALOGO_ITENS:
+                        qtd = quantidades[item['pn']]
+                        if qtd > 0:
+                            itens_solicitados.append({**item, "quantidade": qtd})
+                            
+                    if not itens_solicitados:
+                        st.warning("⚠️ Insira ao menos uma quantidade desejada.")
+                    else:
+                        novo_pedido = {
+                            "id": f"PED-{base_selecionada.split(' - ')[0]}-{str(datetime.now().timestamp())[-4:]}",
+                            "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                            "data_recebimento": "Pendente",
+                            "base": base_selecionada,
+                            "solicitante": nome_solicitante,
+                            "bp": bp_solicitante,
+                            "valor_total": total_geral,
+                            "status": "Pendente",
+                            "itens": itens_solicitados
+                        }
+                        
+                        # Salva no Supabase
+                        if supabase:
+                            try:
+                                supabase.table("pedidos_wms").insert(novo_pedido).execute()
+                                st.session_state.ultimo_pedido_criado = novo_pedido
+                                st.success(f"🎉 Pedido {novo_pedido['id']} registado e salvo na nuvem com sucesso!")
+                            except Exception as e:
+                                st.error(f"Erro ao salvar no banco de dados: {e}")
+                        else:
+                            st.error("⚠️ Conexão com o Supabase não configurada nos Secrets do Streamlit.")
+
+    if 'ultimo_pedido_criado' in st.session_state:
+        p_recente = st.session_state.ultimo_pedido_criado
+        st.markdown("---")
+        st.markdown("### 📥 Baixar Planilha de Solicitação (Pedido Oficial)")
+        
+        csv_pedido_linhas = ["Part Number (PN);Descricao;Unidade;Preco Unitario (R$);Quantidade Solicitada;Valor Total (R$)"]
+        for it in p_recente['itens']:
+            subtotal = it['quantidade'] * it['preco']
+            pn_formatado = f'="{it["pn"]}"'
+            csv_pedido_linhas.append(f"{pn_formatado};{it['descricao']};{it['unidade']};{it['preco']};{it['quantidade']};{subtotal:.2f}")
+        csv_pedido_data = "\n".join(csv_pedido_linhas)
+        
+        st.download_button(
+            label="📄 Baixar Planilha (.csv) do Pedido",
+            data=csv_pedido_data,
+            file_name=f"Planilha_Pedido_{p_recente['base'].split(' - ')[0]}_{p_recente['id']}.csv",
+            mime="text/csv",
+            type="primary"
+        )
 
 elif menu == "Conferência e Ajustes":
     st.title("Conferência, Ajustes e Confirmação de Recebimento")
-    st.markdown("Selecione um pedido para conferir itens, ajustar quantidades e exportar a planilha.")
+    st.markdown("Selecione um pedido para conferir, editar itens e confirmar o recebimento.")
     
     ids_pedidos = [p['id'] for p in pedidos_db]
     if not ids_pedidos:
@@ -235,7 +303,8 @@ elif menu == "Conferência e Ajustes":
             pedido_selecionado_id = st.selectbox("Selecione o Pedido", ids_pedidos)
             pedido = next(p for p in pedidos_db if p['id'] == pedido_selecionado_id)
             
-            st.markdown(f"**Base:** `{pedido['base']}` | **Status Atual:** `{pedido['status']}`")
+            st.markdown(f"**Base:** `{pedido['base']}` | **Solicitante:** `{pedido.get('solicitante', 'N/A')} (BP: {pedido.get('bp', 'N/A')})` | **Status:** `{pedido['status']}`")
+            st.markdown("💡 *Na tabela abaixo você pode clicar nas células para editar nomes, valores, alterar quantidades, ou usar os botões para adicionar/remover linhas:*")
             
             df_itens = pd.DataFrame(pedido['itens'])
             edited_df = st.data_editor(df_itens, num_rows="dynamic", use_container_width=True)
@@ -243,19 +312,27 @@ elif menu == "Conferência e Ajustes":
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("Confirmar Recebimento", type="primary"):
-                    pedido['itens'] = edited_df.to_dict(orient="records")
-                    pedido['status'] = "Recebido"
-                    st.success(f"🎉 Pedido {pedido['id']} marcado como Recebido!")
-                    st.rerun()
+                    data_rec = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    if supabase:
+                        try:
+                            supabase.table("pedidos_wms").update({
+                                "itens": edited_df.to_dict(orient="records"),
+                                "status": "Recebido",
+                                "data_recebimento": data_rec
+                            }).eq("id", pedido['id']).execute()
+                            st.success(f"🎉 Pedido {pedido['id']} marcado como Recebido na nuvem!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erro ao atualizar: {e}")
                     
             with col2:
                 csv_linhas = ["Item;Quantidade"]
                 for i in pedido['itens']:
-                    csv_linhas.append(f"{i['pn']} - {i['descricao']};{i['quantidade']}")
+                    csv_linhas.append(f"{i.get('pn', '')} - {i.get('descricao', '')};{i.get('quantidade', 0)}")
                 csv_data = "\n".join(csv_linhas)
                 
                 st.download_button(
-                    label="Baixar Planilha Insumos (.csv)",
+                    label="Baixar Planilha de Recebimento (.csv)",
                     data=csv_data,
                     file_name=f"Insumos_Conferidos_{pedido['id']}.csv",
                     mime="text/csv"
@@ -263,12 +340,23 @@ elif menu == "Conferência e Ajustes":
 
 elif menu == "Histórico Geral":
     st.title("Auditoria e Histórico Geral")
-    st.markdown("Consolidado de todas as solicitações registradas.")
+    st.markdown("Consolidado completo salvo em nuvem de todas as solicitações registradas.")
     
     with st.container(border=True):
         if pedidos_db:
-            df_geral = pd.DataFrame(pedidos_db)[['id', 'data', 'base', 'valorTotal', 'status']]
-            df_geral.columns = ["ID", "DATA", "BASE", "VALOR TOTAL (R$)", "STATUS"]
+            dados_historico = []
+            for p in pedidos_db:
+                dados_historico.append({
+                    "ID do Pedido": p['id'],
+                    "Base": p['base'],
+                    "Solicitante": p.get('solicitante', 'N/A'),
+                    "BP": p.get('bp', 'N/A'),
+                    "Data/Hora do Pedido": p['data'],
+                    "Data/Hora Recebimento": p.get('data_recebimento', 'Pendente'),
+                    "Valor Total (R$)": f"R$ {p['valor_total']:,.2f}",
+                    "Status": p['status']
+                })
+            df_geral = pd.DataFrame(dados_historico)
             st.dataframe(df_geral, use_container_width=True)
         else:
             st.info("Nenhum pedido registado no sistema.")
@@ -278,7 +366,6 @@ elif menu == "Sugestões e Erros":
     st.markdown("Envie uma mensagem direta para a equipe de desenvolvimento.")
     
     with st.container(border=True):
-        # Substituindo por componentes nativos do Streamlit para evitar código HTML visível
         with st.form("form_feedback"):
             tipo_msg = st.selectbox("TIPO DE MENSAGEM", ["💡 Sugestão de Melhoria", "🛠️ Reportar Erro / Bug", "📌 Outro Assunto"])
             detalhes_msg = st.text_area("DETALHES", placeholder="Descreva aqui sua sugestão ou o erro encontrado...", height=150)
