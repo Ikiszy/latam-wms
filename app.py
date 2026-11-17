@@ -15,7 +15,7 @@ st.set_page_config(
 
 # Configurações do GitHub para persistência de dados
 GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
-GITHUB_REPO = st.secrets.get("GITHUB_REPO", "") # Ex: "Ikiszy/wms-latam-cargo"
+GITHUB_REPO = st.secrets.get("GITHUB_REPO", "")
 FILE_PATH = "pedidos.json"
 
 def carregar_pedidos_github():
@@ -41,7 +41,6 @@ def salvar_pedidos_github(pedidos):
         url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}"
         headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "vnd.github+json"}
         
-        # Obter o SHA atual do arquivo (obrigatório pelo GitHub para updates)
         get_resp = requests.get(url, headers=headers)
         sha = get_resp.json().get("sha") if get_resp.status_code == 200 else None
         
@@ -112,7 +111,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Catálogo Oficial de Insumos LATAM Cargo
 CATALOGO_ITENS = [
     {"pn": "100000000200041651", "descricao": "MANTA PLASTICA ABSORVENTE 1800 X 2400MM", "unidade": "Unidade", "preco": 38.90},
     {"pn": "100000000200041665", "descricao": "MANTA PLASTICA ABSORVENTE 1400 X 2400MM", "unidade": "Unidade", "preco": 34.00},
@@ -222,15 +220,26 @@ if menu == "Painel de Gestão":
     st.markdown("### Histórico de Solicitações Recentes")
     with st.container(border=True):
         if pedidos_db:
-            df_base = pd.DataFrame(pedidos_db)[['id', 'data', 'base', 'solicitante', 'bp', 'valor_total', 'status']]
-            df_base.columns = ["ID PEDIDO", "DATA/HORA", "BASE", "SOLICITANTE", "BP", "VALOR TOTAL (R$)", "STATUS"]
+            dados_tabela = []
+            for p in pedidos_db:
+                val_num = p.get('valor_total', 0)
+                dados_tabela.append({
+                    "ID PEDIDO": p['id'],
+                    "DATA/HORA": p['data'],
+                    "BASE": p['base'],
+                    "SOLICITANTE": p.get('solicitante', 'N/A'),
+                    "BP": p.get('bp', 'N/A'),
+                    "VALOR TOTAL (R$)": f"R$ {val_num:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                    "STATUS": p['status']
+                })
+            df_base = pd.DataFrame(dados_tabela)
             st.dataframe(df_base, use_container_width=True)
         else:
             st.info("Nenhum pedido registado no sistema ainda.")
 
 elif menu == "Solicitar Insumos":
     st.title("Nova Requisição de Materiais")
-    st.markdown("Preencha seus dados de identificação e a calculadora de insumos desejados:")
+    st.markdown("Preencha seus dados de identificação e utilize os botões `+` / `-` ou digite diretamente a quantidade desejada:")
     
     with st.container(border=True):
         st.markdown("### 👤 Identificação do Solicitante")
@@ -243,18 +252,33 @@ elif menu == "Solicitar Insumos":
             base_selecionada = st.selectbox("Base Operacional Solicitante", BASES_LATAM)
     
     with st.container(border=True):
-        quantidades = {}
         with st.form("form_solicitacao_insumos"):
+            quantidades = {}
             for idx, item in enumerate(CATALOGO_ITENS):
-                col1, col2, col3, col4 = st.columns([2, 4, 1, 1])
-                with col1:
+                # Layout reorganizado para incluir botões de mais e menos
+                c_pn, c_desc, c_preco, c_menos, c_qtd, c_mais = st.columns([2.2, 4, 1.2, 0.6, 1.2, 0.6])
+                
+                with c_pn:
                     st.text(item['pn'])
-                with col2:
+                with c_desc:
                     st.text(item['descricao'])
-                with col3:
+                with c_preco:
                     st.text(f"R$ {item['preco']:.2f}")
-                with col4:
-                    quantidades[item['pn']] = st.number_input("Qtd", min_value=0, value=0, key=f"qtd_{idx}", label_visibility="collapsed")
+                
+                # Chave única para o estado do number_input
+                key_qtd = f"qtd_{idx}"
+                if key_qtd not in st.session_state:
+                    st.session_state[key_qtd] = 0
+                
+                with c_menos:
+                    if st.form_submit_button("➖", key=f"menos_{idx}"):
+                        if st.session_state[key_qtd] > 0:
+                            st.session_state[key_qtd] -= 1
+                with c_qtd:
+                    quantidades[item['pn']] = st.number_input("Qtd", min_value=0, value=st.session_state[key_qtd], key=key_qtd, label_visibility="collapsed")
+                with c_mais:
+                    if st.form_submit_button("➕", key=f"mais_{idx}"):
+                        st.session_state[key_qtd] += 1
                     
             total_geral = sum(q * next(i['preco'] for i in CATALOGO_ITENS if i['pn'] == pn) for pn, q in quantidades.items() if q > 0)
             st.markdown(f"### Valor Total Estimado: R$ {total_geral:,.2f}")
@@ -368,6 +392,7 @@ elif menu == "Histórico Geral":
         if pedidos_db:
             dados_historico = []
             for p in pedidos_db:
+                val_num = p.get('valor_total', 0)
                 dados_historico.append({
                     "ID do Pedido": p['id'],
                     "Base": p['base'],
@@ -375,7 +400,7 @@ elif menu == "Histórico Geral":
                     "BP": p.get('bp', 'N/A'),
                     "Data/Hora do Pedido": p['data'],
                     "Data/Hora Recebimento": p.get('data_recebimento', 'Pendente'),
-                    "Valor Total (R$)": f"R$ {p['valor_total']:,.2f}",
+                    "Valor Total (R$)": f"R$ {val_num:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
                     "Status": p['status']
                 })
             df_geral = pd.DataFrame(dados_historico)
