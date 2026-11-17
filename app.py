@@ -1,7 +1,9 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from supabase import create_client
+import requests
+import base64
+import json
 
 # Configuração da Página
 st.set_page_config(
@@ -11,26 +13,53 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Conexão com o Supabase segura
-@st.cache_resource
-def init_supabase():
-    try:
-        url = st.secrets.get("SUPABASE_URL", "").strip()
-        key = st.secrets.get("SUPABASE_KEY", "").strip()
-        
-        if not url or not key:
-            st.error("⚠️ As chaves do Supabase não foram encontradas nos Secrets.")
-            return None
-            
-        if not url.startswith("https://"):
-            url = f"https://{url}"
-            
-        return create_client(url, key)
-    except Exception as e:
-        st.error(f"Erro ao inicializar o Supabase: {e}")
-        return None
+# Configurações do GitHub para persistência de dados
+GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
+GITHUB_REPO = st.secrets.get("GITHUB_REPO", "") # Ex: "Ikiszy/wms-latam-cargo"
+FILE_PATH = "pedidos.json"
 
-supabase = init_supabase()
+def carregar_pedidos_github():
+    if not GITHUB_TOKEN or not GITHUB_REPO:
+        return []
+    try:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}"
+        headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "vnd.github+json"}
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            file_content = response.json()
+            decoded_content = base64.b64decode(file_content["content"]).decode("utf-8")
+            return json.loads(decoded_content)
+        return []
+    except Exception:
+        return []
+
+def salvar_pedidos_github(pedidos):
+    if not GITHUB_TOKEN or not GITHUB_REPO:
+        return False
+    try:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}"
+        headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "vnd.github+json"}
+        
+        # Obter o SHA atual do arquivo (obrigatório pelo GitHub para updates)
+        get_resp = requests.get(url, headers=headers)
+        sha = get_resp.json().get("sha") if get_resp.status_code == 200 else None
+        
+        content_bytes = json.dumps(pedidos, ensure_ascii=False, indent=4).encode("utf-8")
+        encoded_content = base64.b64encode(content_bytes).decode("utf-8")
+        
+        payload = {
+            "message": "Atualização automática de pedidos WMS [skip ci]",
+            "content": encoded_content,
+            "branch": "main"
+        }
+        if sha:
+            payload["sha"] = sha
+            
+        put_resp = requests.put(url, headers=headers, json=payload)
+        return put_resp.status_code in [200, 201]
+    except Exception:
+        return False
 
 # Estilização CSS refinada
 st.markdown("""
@@ -149,16 +178,6 @@ BASES_LATAM = [
     "VCP - Campinas (Viracopos)", "VIX - Vitória"
 ]
 
-# Função para carregar pedidos do Supabase
-def carregar_pedidos():
-    if supabase:
-        try:
-            response = supabase.table("pedidos_wm").select("*").execute()
-            return response.data if response.data else []
-        except Exception:
-            return []
-    return []
-
 # MENU LATERAL
 st.sidebar.markdown("""
     <div style="padding: 10px 0; border-bottom: 1px solid #7C3AED; margin-bottom: 20px;">
@@ -183,7 +202,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-pedidos_db = carregar_pedidos()
+pedidos_db = carregar_pedidos_github()
 
 if menu == "Painel de Gestão":
     col1, col2 = st.columns(2)
@@ -267,16 +286,12 @@ elif menu == "Solicitar Insumos":
                             "itens": itens_solicitados
                         }
                         
-                        # Salva no Supabase
-                        if supabase:
-                            try:
-                                supabase.table("pedidos_wm").insert(novo_pedido).execute()
-                                st.session_state.ultimo_pedido_criado = novo_pedido
-                                st.success(f"🎉 Pedido {novo_pedido['id']} registado e salvo na nuvem com sucesso!")
-                            except Exception as e:
-                                st.error(f"Erro ao salvar no banco de dados: {e}")
+                        pedidos_db.append(novo_pedido)
+                        if salvar_pedidos_github(pedidos_db):
+                            st.session_state.ultimo_pedido_criado = novo_pedido
+                            st.success(f"🎉 Pedido {novo_pedido['id']} registado e guardado no GitHub com sucesso!")
                         else:
-                            st.error("⚠️ Conexão com o Supabase não configurada nos Secrets do Streamlit.")
+                            st.error("⚠️ Erro ao salvar o pedido no repositório do GitHub.")
 
     if 'ultimo_pedido_criado' in st.session_state:
         p_recente = st.session_state.ultimo_pedido_criado
@@ -320,17 +335,17 @@ elif menu == "Conferência e Ajustes":
             with col1:
                 if st.button("Confirmar Recebimento", type="primary"):
                     data_rec = datetime.now().strftime("%d/%m/%Y %H:%M")
-                    if supabase:
-                        try:
-                            supabase.table("pedidos_wm").update({
-                                "itens": edited_df.to_dict(orient="records"),
-                                "status": "Recebido",
-                                "data_recebimento": data_rec
-                            }).eq("id", pedido['id']).execute()
-                            st.success(f"🎉 Pedido {pedido['id']} marcado como Recebido na nuvem!")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Erro ao atualizar: {e}")
+                    for p in pedidos_db:
+                        if p['id'] == pedido['id']:
+                            p['itens'] = edited_df.to_dict(orient="records")
+                            p['status'] = "Recebido"
+                            p['data_recebimento'] = data_rec
+                            break
+                    if salvar_pedidos_github(pedidos_db):
+                        st.success(f"🎉 Pedido {pedido['id']} marcado como Recebido no GitHub!")
+                        st.rerun()
+                    else:
+                        st.error("Erro ao atualizar os dados.")
                     
             with col2:
                 csv_linhas = ["Item;Quantidade"]
@@ -347,7 +362,7 @@ elif menu == "Conferência e Ajustes":
 
 elif menu == "Histórico Geral":
     st.title("Auditoria e Histórico Geral")
-    st.markdown("Consolidado completo salvo em nuvem de todas as solicitações registradas.")
+    st.markdown("Consolidado completo guardado no repositório de todas as solicitações.")
     
     with st.container(border=True):
         if pedidos_db:
