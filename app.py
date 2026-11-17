@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilização CSS refinada (menu lateral ajustado para ocupar 100% da largura com caixas roxas)
+# Estilização CSS refinada (menu lateral ajustado para largura total com fundos roxos arredondados)
 st.markdown("""
     <style>
         .main { background-color: #121824; color: #F8FAFC; }
@@ -27,15 +27,12 @@ st.markdown("""
         .stButton>button:hover {
             background-color: #C50017 !important;
         }
-        /* Remove o ícone padrão do rádio no menu lateral */
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label div:first-child {
             display: none !important;
         }
-        /* Faz o radio group ocupar toda a largura do sidebar */
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] {
             width: 100% !important;
         }
-        /* Estiliza cada item do menu com largura total, borda roxa e fundo arredondado */
         div[data-testid="stSidebar"] div.row-widget.stRadio div[role="radiogroup"] label {
             background: linear-gradient(135deg, #1E1B4B 0%, #0F172A 100%) !important;
             padding: 16px 20px !important;
@@ -174,11 +171,11 @@ if menu == "Painel de Gestão":
             st.markdown("<span style='font-size: 12px; font-weight: 700; color: #38A169; letter-spacing: 1px;'>PEDIDOS APROVADOS / RECEBIDOS</span>", unsafe_allow_html=True)
             st.markdown(f"<h3 style='font-size: 38px; font-weight: 800; color: #FFFFFF; margin-top: 5px;'>{recebidos_count}</h3>", unsafe_allow_html=True)
         
-    st.markdown("### Histórico de Solicitações")
+    st.markdown("### Histórico de Solicitações Recentes")
     with st.container(border=True):
         if pedidos_db:
             df_base = pd.DataFrame(pedidos_db)[['id', 'data', 'base', 'valorTotal', 'status']]
-            df_base.columns = ["ID PEDIDO", "DATA", "BASE", "VALOR TOTAL (R$)", "STATUS"]
+            df_base.columns = ["ID PEDIDO", "DATA/HORA PEDIDO", "BASE", "VALOR TOTAL (R$)", "STATUS"]
             st.dataframe(df_base, use_container_width=True)
         else:
             st.info("Nenhum pedido registado nesta sessão ainda.")
@@ -221,6 +218,7 @@ elif menu == "Solicitar Insumos":
                     novo_pedido = {
                         "id": f"PED-{base_selecionada.split(' - ')[0]}-{str(datetime.now().timestamp())[-4:]}",
                         "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "data_recebimento": "Pendente",
                         "base": base_selecionada,
                         "valorTotal": total_geral,
                         "status": "Pendente",
@@ -262,7 +260,7 @@ elif menu == "Conferência e Ajustes":
             pedido_selecionado_id = st.selectbox("Selecione o Pedido", ids_pedidos)
             pedido = next(p for p in pedidos_db if p['id'] == pedido_selecionado_id)
             
-            st.markdown(f"**Base:** `{pedido['base']}` | **Status Atual:** `{pedido['status']}`")
+            st.markdown(f"**Base:** `{pedido['base']}` | **Status Atual:** `{pedido['status']}` | **Data do Pedido:** `{pedido['data']}`")
             st.markdown("💡 *Na tabela abaixo você pode clicar nas células para editar nomes, valores, alterar quantidades, ou usar os botões para adicionar/remover linhas:*")
             
             df_itens = pd.DataFrame(pedido['itens'])
@@ -273,7 +271,8 @@ elif menu == "Conferência e Ajustes":
                 if st.button("Confirmar Recebimento", type="primary"):
                     pedido['itens'] = edited_df.to_dict(orient="records")
                     pedido['status'] = "Recebido"
-                    st.success(f"🎉 Pedido {pedido['id']} marcado como Recebido com os ajustes salvos!")
+                    pedido['data_recebimento'] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    st.success(f"🎉 Pedido {pedido['id']} marcado como Recebido e data registrada com sucesso!")
                     st.rerun()
                     
             with col2:
@@ -291,15 +290,25 @@ elif menu == "Conferência e Ajustes":
 
 elif menu == "Histórico Geral":
     st.title("Auditoria e Histórico Geral")
-    st.markdown("Consolidado de todas as solicitações registradas.")
+    st.markdown("Consolidado completo de todas as solicitações registradas, contendo data/hora do pedido e data/hora do recebimento.")
     
     with st.container(border=True):
         if pedidos_db:
-            df_geral = pd.DataFrame(pedidos_db)[['id', 'data', 'base', 'valorTotal', 'status']]
-            df_geral.columns = ["ID", "DATA", "BASE", "VALOR TOTAL (R$)", "STATUS"]
+            # Cria um resumo detalhado para o histórico geral
+            dados_historico = []
+            for p in pedidos_db:
+                dados_historico.append({
+                    "ID do Pedido": p['id'],
+                    "Base": p['base'],
+                    "Data/Hora do Pedido": p['data'],
+                    "Data/Hora do Recebimento": p.get('data_recebimento', 'Pendente'),
+                    "Valor Total (R$)": f"R$ {p['valorTotal']:,.2f}",
+                    "Status": p['status']
+                })
+            df_geral = pd.DataFrame(dados_historico)
             st.dataframe(df_geral, use_container_width=True)
         else:
-            st.info("Nenhum pedido registado no sistema.")
+            st.info("Nenhum pedido registado no sistema nesta sessão.")
 
 elif menu == "Sugestões e Erros":
     st.title("Central de Feedback e Sugestões")
@@ -307,7 +316,7 @@ elif menu == "Sugestões e Erros":
     
     with st.container(border=True):
         with st.form("form_feedback"):
-            tipo_msg = st.selectbox("TIPO DE MENSAGEM", ["💡 Sugestão de Melhoria", "🛠️ Reportar Erro / Bug", "📌 Outro Assunto"])
+            tipo_msg = st.selectbox("TIPO DE MESSAGE", ["💡 Sugestão de Melhoria", "🛠️ Reportar Erro / Bug", "📌 Outro Assunto"])
             detalhes_msg = st.text_area("DETALHES", placeholder="Descreva aqui sua sugestão ou o erro encontrado...", height=150)
             submit_feedback = st.form_submit_button("Enviar Mensagem 🚀", type="primary")
             
